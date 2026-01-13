@@ -1,62 +1,32 @@
 @import "tailwindcss";
 
-/* ooxml.dev theme - Coral Light (with dark mode) */
+/* ooxml.dev theme - Coral Light */
 :root {
 	/* Coral accent */
 	--color-accent: #ea580c;
 	--color-accent-hover: #c2410c;
 	--color-accent-light: #fff7ed;
 
-	/* Light mode backgrounds */
+	/* Backgrounds */
 	--color-bg-primary: #ffffff;
 	--color-bg-secondary: #fafaf9;
 	--color-bg-tertiary: #f5f5f4;
 	--color-bg-code: #1c1917;
 
-	/* Light mode borders */
+	/* Borders */
 	--color-border: #e7e5e4;
 	--color-border-strong: #d6d3d1;
 
-	/* Light mode text */
+	/* Text */
 	--color-text-primary: #1c1917;
 	--color-text-secondary: #57534e;
 	--color-text-muted: #a8a29e;
 
-	/* Syntax highlighting (for light mode code blocks on dark bg) */
+	/* Syntax highlighting (for code blocks on dark bg) */
 	--color-syntax-tag: #22d3ee;
 	--color-syntax-attr: #c4b5fd;
 	--color-syntax-value: #86efac;
 	--color-syntax-comment: #71717a;
-}
-
-.dark {
-	/* Coral accent (slightly lighter for dark mode) */
-	--color-accent: #fb923c;
-	--color-accent-hover: #f97316;
-	--color-accent-light: #431407;
-
-	/* Dark mode backgrounds */
-	--color-bg-primary: #0c0a09;
-	--color-bg-secondary: #1c1917;
-	--color-bg-tertiary: #292524;
-	--color-bg-code: #1c1917;
-
-	/* Dark mode borders */
-	--color-border: #292524;
-	--color-border-strong: #44403c;
-
-	/* Dark mode text */
-	--color-text-primary: #fafaf9;
-	--color-text-secondary: #a8a29e;
-	--color-text-muted: #78716c;
-}
-
-html {
-	color-scheme: light;
-}
-
-html.dark {
-	color-scheme: dark;
 }
 
 body {
@@ -65,18 +35,6 @@ body {
 	color: var(--color-text-primary);
 	margin: 0;
 	min-height: 100vh;
-	transition:
-		background-color 0.2s ease,
-		color 0.2s ease;
-}
-
-/* Smooth transitions for theme changes */
-*,
-*::before,
-*::after {
-	transition:
-		background-color 0.2s ease,
-		border-color 0.2s ease;
 }
 
 /* Code syntax highlighting */
@@ -98,34 +56,18 @@ body {
 	background-color: #fef2f2;
 	border-color: #fecaca;
 }
-.dark .note-critical {
-	background-color: rgba(127, 29, 29, 0.3);
-	border-color: #7f1d1d;
-}
 
 .note-warning {
 	background-color: #fffbeb;
 	border-color: #fde68a;
-}
-.dark .note-warning {
-	background-color: rgba(120, 53, 15, 0.3);
-	border-color: #78350f;
 }
 
 .note-info {
 	background-color: #fff7ed;
 	border-color: #fed7aa;
 }
-.dark .note-info {
-	background-color: rgba(124, 45, 18, 0.3);
-	border-color: #7c2d12;
-}
 
 .note-tip {
 	background-color: #f0fdf4;
 	border-color: #bbf7d0;
-}
-.dark .note-tip {
-	background-color: rgba(20, 83, 45, 0.3);
-	border-color: #14532d;
 }
