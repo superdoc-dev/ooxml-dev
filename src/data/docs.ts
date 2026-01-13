@@ -28,7 +28,7 @@ export const docs: Record<string, DocPage> = {
 				type: "note",
 				noteType: "info",
 				title: "Work in Progress",
-				text: "This reference is actively being expanded. We're adding new sections, examples, and implementation notes regularly. Check our [GitHub](https://github.com/superdoc-dev/ooxml.dev) for updates and how to contribute.",
+				text: "This reference is actively being expanded. We're adding new sections, examples, and implementation notes regularly. Check our [GitHub](https://github.com/superdoc-dev/ooxml-dev) for updates and how to contribute.",
 			},
 			{ type: "heading", level: 2, text: "What's Different Here" },
 			{

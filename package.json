@@ -1,43 +1,43 @@
 {
-  "name": "ooxml-dev",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "lint": "biome check .",
-    "format": "biome check --write .",
-    "typecheck": "tsc --noEmit",
-    "release": "semantic-release",
-    "deploy": "bun run format && bun run lint && bun run typecheck && bun run build && wrangler pages deploy dist --project-name=ooxml-dev",
-    "prepare": "husky"
-  },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "fumadocs-core": "^16.4.7",
-    "fumadocs-ui": "^16.4.7",
-    "jszip": "^3.10.1",
-    "lucide-react": "^0.562.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "react-router-dom": "^7.12.0"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.3.11",
-    "@semantic-release/commit-analyzer": "^13.0.1",
-    "@semantic-release/exec": "^7.1.0",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.2",
-    "husky": "^9.1.7",
-    "semantic-release": "^25.0.2",
-    "@tailwindcss/vite": "^4.1.18",
-    "@types/react": "^19.2.8",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.2",
-    "tailwindcss": "^4.1.18",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1"
-  }
+	"name": "ooxml-dev",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc && vite build",
+		"preview": "vite preview",
+		"lint": "biome check .",
+		"format": "biome check --write .",
+		"typecheck": "tsc --noEmit",
+		"release": "semantic-release",
+		"deploy": "bun run format && bun run lint && bun run typecheck && bun run build && wrangler pages deploy dist --project-name=ooxml-dev",
+		"prepare": "husky"
+	},
+	"dependencies": {
+		"clsx": "^2.1.1",
+		"fumadocs-core": "^16.4.7",
+		"fumadocs-ui": "^16.4.7",
+		"jszip": "^3.10.1",
+		"lucide-react": "^0.562.0",
+		"react": "^19.2.3",
+		"react-dom": "^19.2.3",
+		"react-router-dom": "^7.12.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.11",
+		"@semantic-release/commit-analyzer": "^13.0.1",
+		"@semantic-release/exec": "^7.1.0",
+		"@semantic-release/git": "^10.0.1",
+		"@semantic-release/github": "^12.0.2",
+		"husky": "^9.1.7",
+		"semantic-release": "^25.0.2",
+		"@tailwindcss/vite": "^4.1.18",
+		"@types/react": "^19.2.8",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^5.1.2",
+		"tailwindcss": "^4.1.18",
+		"typescript": "~5.9.3",
+		"vite": "^7.3.1"
+	}
 }
