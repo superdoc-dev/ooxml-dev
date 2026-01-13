@@ -8,27 +8,22 @@ export function Home() {
 			<Navbar maxWidth />
 
 			{/* Hero */}
-			<main className="mx-auto max-w-4xl px-6 py-24 text-center">
+			<main className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 sm:py-24">
 				<p className="mb-4 text-sm font-medium text-[var(--color-accent)]">ECMA-376 / ISO 29500</p>
-				<h1 className="mb-6 text-5xl font-bold tracking-tight">ooxml.dev</h1>
-				<p className="mb-8 text-xl text-[var(--color-text-secondary)]">
+				<h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl">ooxml.dev</h1>
+				<p className="mb-8 text-lg text-[var(--color-text-secondary)] sm:text-xl">
 					The OOXML spec, explained by people who actually implemented it.
-					<br />
+					<br className="hidden sm:block" />
+					<span className="sm:hidden"> </span>
 					Interactive examples, real-world gotchas, and live previews.
 				</p>
 				<div className="flex justify-center gap-4">
 					<Link
 						to="/docs"
-						className="rounded-lg bg-[var(--color-accent)] px-6 py-3 font-medium text-white transition hover:bg-[var(--color-accent-hover)]"
+						className="rounded-lg bg-[var(--color-accent)] px-5 py-2.5 font-medium text-white transition hover:bg-[var(--color-accent-hover)] sm:px-6 sm:py-3"
 					>
 						Browse Reference
 					</Link>
-					{/* <a
-            href="#"
-            className="rounded-lg border border-[var(--color-border)] px-6 py-3 font-medium transition hover:bg-[var(--color-bg-secondary)]"
-          >
-            Open Playground
-          </a> */}
 				</div>
 			</main>
 

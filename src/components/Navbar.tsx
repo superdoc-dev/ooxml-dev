@@ -1,4 +1,6 @@
 import { clsx } from "clsx";
+import { Menu, X } from "lucide-react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logoDark from "../assets/logo-dark.png";
 import logoLight from "../assets/logo-light.png";
@@ -14,23 +16,26 @@ export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 	const location = useLocation();
 	const { resolvedTheme } = useTheme();
 	const isDocsActive = location.pathname.startsWith("/docs");
+	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
 	return (
 		<header
 			className={clsx(
-				"border-b border-[var(--color-border)] bg-[var(--color-bg-primary)] px-6 py-3",
+				"border-b border-[var(--color-border)] bg-[var(--color-bg-primary)] px-4 py-3 sm:px-6",
 				sticky && "sticky top-0 z-50",
 			)}
 		>
 			<div className={clsx("flex items-center justify-between", maxWidth && "mx-auto max-w-6xl")}>
-				<Link to="/" className="flex items-center">
+				<Link to="/" className="flex shrink-0 items-center">
 					<img
 						src={resolvedTheme === "dark" ? logoDark : logoLight}
 						alt="ooxml.dev"
 						className="h-6"
 					/>
 				</Link>
-				<nav className="flex items-center gap-4">
+
+				{/* Desktop navigation */}
+				<nav className="hidden items-center gap-4 sm:flex">
 					<NavLink to="/docs" active={isDocsActive}>
 						Reference
 					</NavLink>
@@ -44,7 +49,37 @@ export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 					</NavLink>
 					<ThemeToggle />
 				</nav>
+
+				{/* Mobile menu button */}
+				<div className="flex items-center gap-2 sm:hidden">
+					<ThemeToggle />
+					<button
+						type="button"
+						onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+						className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
+						aria-label="Toggle menu"
+					>
+						{mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+					</button>
+				</div>
 			</div>
+
+			{/* Mobile menu */}
+			{mobileMenuOpen && (
+				<nav className="mt-3 flex flex-col gap-1 border-t border-[var(--color-border)] pt-3 sm:hidden">
+					<NavLink to="/docs" active={isDocsActive} onClick={() => setMobileMenuOpen(false)}>
+						Reference
+					</NavLink>
+					<NavLink to="#" active={false} disabled>
+						<span className="relative pr-6">
+							Playground
+							<span className="absolute -top-2 -right-1 rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)]">
+								soon
+							</span>
+						</span>
+					</NavLink>
+				</nav>
+			)}
 		</header>
 	);
 }
@@ -54,11 +89,13 @@ function NavLink({
 	active,
 	disabled,
 	children,
+	onClick,
 }: {
 	to: string;
 	active: boolean;
 	disabled?: boolean;
 	children: React.ReactNode;
+	onClick?: () => void;
 }) {
 	const className = clsx(
 		"rounded px-3 py-1.5 text-sm transition",
@@ -82,7 +119,7 @@ function NavLink({
 	}
 
 	return (
-		<Link to={to} className={className}>
+		<Link to={to} className={className} onClick={onClick}>
 			{children}
 		</Link>
 	);
