@@ -188,14 +188,14 @@ export const docs: Record<string, DocPage> = {
     <w:jc w:val="center"/>
   </w:pPr>
   <w:r>
-    <w:t>Normal text, </w:t>
+    <w:t xml:space="preserve">Normal text, </w:t>
   </w:r>
   <w:r>
     <w:rPr><w:b/></w:rPr>
     <w:t>bold text</w:t>
   </w:r>
   <w:r>
-    <w:t>, and </w:t>
+    <w:t xml:space="preserve">, and </w:t>
   </w:r>
   <w:r>
     <w:rPr><w:i/></w:rPr>
