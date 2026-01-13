@@ -129,11 +129,19 @@ function wrapInDocument(xmlSnippet: string): string {
 		return xmlSnippet;
 	}
 
-	// Wrap the snippet in a document structure
+	// Wrap the snippet in a document structure with small page size and margins
+	// for better display in the preview container.
+	// Page width: 4 inches = 5760 twips
+	// Left/right margins: 0.1 inches = 144 twips
+	// Top/bottom margins: 0.25 inches = 360 twips
 	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:body>
     ${xmlSnippet}
+    <w:sectPr>
+      <w:pgSz w:w="5760" w:h="15840"/>
+      <w:pgMar w:top="360" w:right="144" w:bottom="360" w:left="144" w:header="720" w:footer="720"/>
+    </w:sectPr>
   </w:body>
 </w:document>`;
 }
