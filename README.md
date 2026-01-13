@@ -1,0 +1,42 @@
+<img width="200" alt="ooxml.dev logo" src="public/logo-dark.png" />
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+The OOXML spec, explained by people who actually implemented it.
+
+## What is this?
+
+An interactive reference for ECMA-376 (Office Open XML) with:
+
+- **Live previews** - See XML rendered in real-time with SuperDoc
+- **Implementation notes** - Real-world gotchas from building document processors
+- **Practical examples** - Working code, not just spec excerpts
+
+## Why?
+
+The official ECMA-376 spec is 5,000+ pages. Most of it you'll never need. This reference focuses on what matters for building document tools, with insights from implementing [SuperDoc](https://superdoc.dev).
+
+## Development
+
+```bash
+# Install dependencies
+bun install
+
+# Start dev server
+bun dev
+
+# Build for production
+bun run build
+```
+
+## Contributing
+
+Contributions welcome! Add implementation notes, fix examples, or improve docs.
+
+## License
+
+MIT
+
+---
+
+Built by 🦋[SuperDoc](https://superdoc.dev)
