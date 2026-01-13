@@ -1,4 +1,5 @@
-<img width="200" alt="ooxml.dev logo" src="public/logo-dark.png" />
+<img width="300" alt="logo" src="https://github.com/user-attachments/assets/df6311a6-c050-4592-bbf1-4a2228655bc3" />
+
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
