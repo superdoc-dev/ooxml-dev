@@ -2,10 +2,7 @@ import { clsx } from "clsx";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import logoDark from "../assets/logo-dark.png";
-import logoLight from "../assets/logo-light.png";
-import { useTheme } from "../hooks/useTheme";
-import { ThemeToggle } from "./ThemeToggle";
+import logo from "../assets/logo.png";
 
 interface NavbarProps {
 	sticky?: boolean;
@@ -14,7 +11,6 @@ interface NavbarProps {
 
 export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 	const location = useLocation();
-	const { resolvedTheme } = useTheme();
 	const isDocsActive = location.pathname.startsWith("/docs");
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -28,7 +24,7 @@ export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 			<div className={clsx("flex items-center justify-between", maxWidth && "mx-auto max-w-6xl")}>
 				<Link to="/" className="flex shrink-0 items-center">
 					<img
-						src={resolvedTheme === "dark" ? logoDark : logoLight}
+						src={logo}
 						alt="ooxml.dev"
 						className="h-6"
 					/>
@@ -47,12 +43,10 @@ export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 							</span>
 						</span>
 					</NavLink>
-					<ThemeToggle />
 				</nav>
 
 				{/* Mobile menu button */}
 				<div className="flex items-center gap-2 sm:hidden">
-					<ThemeToggle />
 					<button
 						type="button"
 						onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
