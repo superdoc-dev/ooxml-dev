@@ -23,11 +23,7 @@ export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 		>
 			<div className={clsx("flex items-center justify-between", maxWidth && "mx-auto max-w-6xl")}>
 				<Link to="/" className="flex shrink-0 items-center">
-					<img
-						src={logo}
-						alt="ooxml.dev"
-						className="h-6"
-					/>
+					<img src={logo} alt="ooxml.dev" className="h-6" />
 				</Link>
 
 				{/* Desktop navigation */}
