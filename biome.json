@@ -31,6 +31,6 @@
 		}
 	},
 	"files": {
-		"includes": ["src/**", "*.json", "*.ts"]
+		"includes": ["src/**", "*.json", "*.ts", "!package.json"]
 	}
 }
