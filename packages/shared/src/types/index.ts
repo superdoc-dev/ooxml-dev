@@ -1,28 +1,15 @@
 // Shared types for ECMA spec data
 
-export interface SpecChunk {
+export interface SpecContent {
 	id: number;
 	partNumber: number;
 	sectionId: string | null;
-	sectionTitle: string | null;
+	title: string | null;
 	content: string;
-	contentType: "text" | "xml_example" | "table";
-	pageNumber: number | null;
+	contentType: string;
 	embedding?: number[];
 }
 
-export interface SpecSection {
-	id: number;
-	partNumber: number;
-	sectionId: string;
-	sectionTitle: string | null;
-	parentSectionId: string | null;
-	depth: number;
-	pageStart: number | null;
-	pageEnd: number | null;
-}
-
-export interface SearchResult {
-	chunk: SpecChunk;
+export interface SearchResult extends SpecContent {
 	score: number;
 }

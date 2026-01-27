@@ -1,0 +1,4 @@
+# Python dependencies for PDF extraction
+# Install with: pip install -r scripts/requirements.txt
+pymupdf4llm>=0.0.17
+pymupdf>=1.24.0

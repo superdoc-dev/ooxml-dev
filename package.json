@@ -14,7 +14,16 @@
     "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd apps/mcp-server typecheck && bun run --cwd packages/shared typecheck",
     "release": "semantic-release",
     "deploy": "bun run format && bun run lint && bun run --cwd apps/web deploy",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "db:shell": "docker compose exec db psql -U postgres -d ecma_spec",
+    "ingest": "bun scripts/ingest/pipeline.ts",
+    "ingest:chunk": "bun scripts/ingest/chunk.ts",
+    "ingest:embed": "bun scripts/ingest/embed.ts",
+    "ingest:upload": "bun scripts/ingest/upload.ts",
+    "ingest:setup": "pip install -r scripts/requirements.txt"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
