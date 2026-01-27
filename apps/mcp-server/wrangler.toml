@@ -1,0 +1,9 @@
+name = "ecma-spec-mcp"
+main = "src/index.ts"
+compatibility_date = "2024-12-30"
+
+# NeonDB connection (set via wrangler secret)
+# wrangler secret put DATABASE_URL
+
+# Embedding API keys (set via wrangler secret)
+# wrangler secret put OPENAI_API_KEY
