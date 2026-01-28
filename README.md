@@ -17,6 +17,16 @@ An interactive reference for ECMA-376 (Office Open XML) with:
 
 The official ECMA-376 spec is 5,000+ pages. Most of it you'll never need. This reference focuses on what matters for building document tools, with insights from implementing [SuperDoc](https://superdoc.dev).
 
+## MCP Server ![New](https://img.shields.io/badge/New-blue)
+
+**The world's first ECMA-376 MCP server.** Ask Claude about OOXML and get answers grounded in the actual spec.
+
+```bash
+claude mcp add --transport http ecma-spec https://api.ooxml.dev/mcp
+```
+
+Example: *"How do I set paragraph spacing in WordprocessingML?"* - Claude searches 18,000+ spec chunks and returns the relevant sections.
+
 ## Development
 
 ```bash
