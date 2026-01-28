@@ -41,16 +41,16 @@ export default {
 			return handleMcp(request, env, ctx);
 		}
 
-		// Simple REST API for testing
-		if (url.pathname === "/api/search" && request.method === "POST") {
+		// REST API endpoints
+		if (url.pathname === "/search" && request.method === "POST") {
 			return handleSearch(request, env);
 		}
 
-		if (url.pathname === "/api/section" && request.method === "GET") {
+		if (url.pathname === "/section" && request.method === "GET") {
 			return handleGetSection(request, env);
 		}
 
-		if (url.pathname === "/api/stats") {
+		if (url.pathname === "/stats") {
 			return handleStats(env);
 		}
 
@@ -61,9 +61,9 @@ export default {
 				endpoints: {
 					mcp: "/mcp",
 					health: "/health",
-					search: "POST /api/search",
-					section: "GET /api/section?id=17.3.2&part=1",
-					stats: "/api/stats",
+					search: "POST /search",
+					section: "GET /section?id=17.3.2&part=1",
+					stats: "/stats",
 				},
 			}),
 			{
