@@ -41,7 +41,7 @@ const TOOLS = [
 	{
 		name: "search_ecma_spec",
 		description:
-			"Search the ECMA-376 (Office Open XML) specification semantically. Returns relevant sections based on natural language queries.",
+			"Semantic search across the ECMA-376 (Office Open XML) specification. Returns relevant sections based on natural language queries about WordprocessingML, SpreadsheetML, PresentationML, and more.",
 		inputSchema: {
 			type: "object" as const,
 			properties: {
