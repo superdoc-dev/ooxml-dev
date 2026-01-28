@@ -32,7 +32,10 @@ export function Home() {
 						NEW
 					</span>
 					<span className="text-[var(--color-text-secondary)]">Search the spec via MCP</span>
-					<Link to="/mcp" className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-medium text-xs">
+					<Link
+						to="/mcp"
+						className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-medium text-xs"
+					>
 						Learn more →
 					</Link>
 				</div>

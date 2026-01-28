@@ -59,7 +59,8 @@ export function Mcp() {
 					</div>
 					<h1 className="text-3xl font-bold mb-4">Search the ECMA-376 spec with AI</h1>
 					<p className="text-[var(--color-text-secondary)] max-w-xl mx-auto">
-						Connect your MCP-compatible client to search 18,000+ specification chunks using natural language queries.
+						Connect your MCP-compatible client to search 18,000+ specification chunks using natural
+						language queries.
 					</p>
 				</div>
 
@@ -67,7 +68,9 @@ export function Mcp() {
 				<div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 mb-8">
 					<h2 className="font-semibold mb-3">Endpoint</h2>
 					<div className="flex items-center gap-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg px-4 py-3">
-						<code className="text-[var(--color-text-primary)] font-mono flex-1">{MCP_ENDPOINT}</code>
+						<code className="text-[var(--color-text-primary)] font-mono flex-1">
+							{MCP_ENDPOINT}
+						</code>
 						<button
 							onClick={copyEndpoint}
 							className="text-xs font-medium bg-[var(--color-accent)] text-white px-3 py-1.5 rounded hover:bg-[var(--color-accent-hover)] transition-colors"
@@ -98,9 +101,13 @@ export function Mcp() {
 						<div className="p-4 bg-[var(--color-bg-primary)]">
 							{activeTab === "claude" && (
 								<>
-									<p className="text-sm text-[var(--color-text-secondary)] mb-3">Run this command in your terminal:</p>
+									<p className="text-sm text-[var(--color-text-secondary)] mb-3">
+										Run this command in your terminal:
+									</p>
 									<div className="flex items-center gap-2 bg-[var(--color-bg-code)] rounded-lg px-4 py-3">
-										<code className="text-[var(--color-syntax-value)] font-mono text-sm flex-1">{CLAUDE_COMMAND}</code>
+										<code className="text-[var(--color-syntax-value)] font-mono text-sm flex-1">
+											{CLAUDE_COMMAND}
+										</code>
 										<button
 											onClick={copyCommand}
 											className="text-[var(--color-text-muted)] hover:text-white text-sm transition shrink-0"
@@ -141,10 +148,13 @@ export function Mcp() {
 										Use the endpoint URL with any MCP-compatible client:
 									</p>
 									<div className="flex items-center gap-2 bg-[var(--color-bg-code)] rounded-lg px-4 py-3">
-										<code className="text-[var(--color-syntax-value)] font-mono text-sm flex-1">{MCP_ENDPOINT}</code>
+										<code className="text-[var(--color-syntax-value)] font-mono text-sm flex-1">
+											{MCP_ENDPOINT}
+										</code>
 									</div>
 									<p className="text-xs text-[var(--color-text-muted)] mt-3">
-										This server uses HTTP transport. Check your client's documentation for configuration details.
+										This server uses HTTP transport. Check your client's documentation for
+										configuration details.
 									</p>
 								</>
 							)}
@@ -198,11 +208,13 @@ export function Mcp() {
 						>
 							Model Context Protocol
 						</a>{" "}
-						(MCP) is an open standard that lets AI assistants connect to external data sources and tools.
+						(MCP) is an open standard that lets AI assistants connect to external data sources and
+						tools.
 					</p>
 					<p className="text-sm text-[var(--color-text-secondary)]">
-						By connecting to this MCP server, your AI assistant gains the ability to search and retrieve information from
-						the ECMA-376 specification—making it much easier to work with Office Open XML.
+						By connecting to this MCP server, your AI assistant gains the ability to search and
+						retrieve information from the ECMA-376 specification—making it much easier to work with
+						Office Open XML.
 					</p>
 				</div>
 			</main>
@@ -221,7 +233,10 @@ export function Mcp() {
 							SuperDoc
 						</a>
 					</span>
-					<Link to="/docs" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+					<Link
+						to="/docs"
+						className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+					>
 						Back to Docs →
 					</Link>
 				</div>
