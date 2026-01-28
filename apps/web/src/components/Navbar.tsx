@@ -12,6 +12,7 @@ interface NavbarProps {
 export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 	const location = useLocation();
 	const isDocsActive = location.pathname.startsWith("/docs");
+	const isMcpActive = location.pathname === "/mcp";
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
 	return (
@@ -31,14 +32,22 @@ export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 					<NavLink to="/docs" active={isDocsActive}>
 						Reference
 					</NavLink>
-					<NavLink to="#" active={false} disabled>
-						<span className="relative pr-6">
-							Playground
-							<span className="absolute -top-2 -right-1 rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)]">
-								soon
-							</span>
+					<div className="flex items-center gap-1">
+						<NavLink to="/mcp" active={isMcpActive}>
+							MCP
+						</NavLink>
+						<span className="rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)]">
+							new
 						</span>
-					</NavLink>
+					</div>
+					<div className="flex items-center gap-1">
+						<NavLink to="#" active={false} disabled>
+							Playground
+						</NavLink>
+						<span className="rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)] opacity-50">
+							soon
+						</span>
+					</div>
 				</nav>
 
 				{/* Mobile menu button */}
@@ -60,14 +69,22 @@ export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 					<NavLink to="/docs" active={isDocsActive} onClick={() => setMobileMenuOpen(false)}>
 						Reference
 					</NavLink>
-					<NavLink to="#" active={false} disabled>
-						<span className="relative pr-6">
-							Playground
-							<span className="absolute -top-2 -right-1 rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)]">
-								soon
-							</span>
+					<div className="flex items-center gap-1">
+						<NavLink to="/mcp" active={isMcpActive} onClick={() => setMobileMenuOpen(false)}>
+							MCP
+						</NavLink>
+						<span className="rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)]">
+							new
 						</span>
-					</NavLink>
+					</div>
+					<div className="flex items-center gap-1">
+						<NavLink to="#" active={false} disabled>
+							Playground
+						</NavLink>
+						<span className="rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)] opacity-50">
+							soon
+						</span>
+					</div>
 				</nav>
 			)}
 		</header>

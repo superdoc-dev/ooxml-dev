@@ -17,12 +17,23 @@ export function Home() {
 					<span className="sm:hidden"> </span>
 					Interactive examples, real-world gotchas, live previews, and AI-powered search.
 				</p>
-				<div className="flex justify-center gap-4">
+				<div className="flex justify-center gap-4 mb-6">
 					<Link
 						to="/docs"
 						className="rounded-lg bg-[var(--color-accent)] px-5 py-2.5 font-medium text-white transition hover:bg-[var(--color-accent-hover)] sm:px-6 sm:py-3"
 					>
 						Browse Reference
+					</Link>
+				</div>
+
+				{/* MCP Callout */}
+				<div className="flex items-center justify-center gap-2 text-sm">
+					<span className="bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] font-medium px-1.5 py-0.5 rounded">
+						NEW
+					</span>
+					<span className="text-[var(--color-text-secondary)]">Search the spec via MCP</span>
+					<Link to="/mcp" className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-medium text-xs">
+						Learn more →
 					</Link>
 				</div>
 			</main>
