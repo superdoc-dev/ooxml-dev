@@ -1,0 +1,15 @@
+pre-commit:
+  commands:
+    format:
+      run: bun run format
+    lint:
+      run: bun run lint
+    typecheck:
+      run: bun run typecheck
+    build:
+      run: bun run build
+
+pre-push:
+  commands:
+    fetch:
+      run: git fetch

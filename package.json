@@ -14,7 +14,7 @@
     "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd apps/mcp-server typecheck && bun run --cwd packages/shared typecheck",
     "release": "semantic-release",
     "deploy": "bun run format && bun run lint && bun run --cwd apps/web deploy",
-    "prepare": "husky",
+    "prepare": "lefthook install",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d",
@@ -31,7 +31,7 @@
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.2",
-    "husky": "^9.1.7",
+    "lefthook": "^2.0.16",
     "semantic-release": "^25.0.2",
     "typescript": "~5.9.3"
   }
