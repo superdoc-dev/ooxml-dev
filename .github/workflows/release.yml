@@ -6,8 +6,8 @@ on:
     branches:
       - main
     paths:
-      - "src/**"
-      - "package.json"
+      - "apps/**"
+      - "packages/**"
 
 jobs:
   release:
@@ -30,8 +30,16 @@ jobs:
 
       - run: bun install
 
-      - name: Release
+      - name: Release MCP Server
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HUSKY: 0
+        working-directory: apps/mcp-server
+        run: bunx semantic-release
+
+      - name: Release Web
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUSKY: 0
+        working-directory: apps/web
         run: bunx semantic-release
