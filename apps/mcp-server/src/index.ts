@@ -11,6 +11,7 @@
 
 import { createDb } from "./db";
 import { embedQuery } from "./embeddings";
+import { handleMcpRequest } from "./mcp";
 
 export interface Env {
 	DATABASE_URL: string;
@@ -26,7 +27,7 @@ const PART_DESCRIPTIONS: Record<number, string> = {
 };
 
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+	async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
 		const url = new URL(request.url);
 
 		// Health check
@@ -36,9 +37,14 @@ export default {
 			});
 		}
 
-		// MCP endpoint - use SSE transport for compatibility
+		// MCP endpoint
 		if (url.pathname === "/mcp" || url.pathname === "/sse") {
-			return handleMcp(request, env, ctx);
+			if (request.method === "POST") {
+				// MCP protocol (JSON-RPC)
+				return handleMcpRequest(request, env);
+			}
+			// GET returns server info for debugging
+			return handleMcpInfo();
 		}
 
 		// REST API endpoints
@@ -73,8 +79,8 @@ export default {
 	},
 };
 
-// MCP info endpoint
-async function handleMcp(_request: Request, _env: Env, _ctx: ExecutionContext): Promise<Response> {
+// MCP info endpoint (GET for debugging)
+function handleMcpInfo(): Response {
 	return new Response(
 		JSON.stringify({
 			name: "ecma-spec",
