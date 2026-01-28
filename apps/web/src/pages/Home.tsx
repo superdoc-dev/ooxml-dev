@@ -15,7 +15,7 @@ export function Home() {
 					The OOXML spec, explained by people who actually implemented it.
 					<br className="hidden sm:block" />
 					<span className="sm:hidden"> </span>
-					Interactive examples, real-world gotchas, and live previews.
+					Interactive examples, real-world gotchas, live previews, and AI-powered search.
 				</p>
 				<div className="flex justify-center gap-4">
 					<Link
