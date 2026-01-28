@@ -1,9 +1,11 @@
 name = "ecma-spec-mcp"
 main = "src/index.ts"
-compatibility_date = "2024-12-30"
+compatibility_date = "2026-01-28"
+compatibility_flags = ["nodejs_compat"]
 
-# NeonDB connection (set via wrangler secret)
+# Secrets (set via wrangler secret):
 # wrangler secret put DATABASE_URL
+# wrangler secret put VOYAGE_API_KEY
 
-# Embedding API keys (set via wrangler secret)
-# wrangler secret put OPENAI_API_KEY
+[vars]
+# Non-secret environment variables can go here

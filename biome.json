@@ -40,7 +40,8 @@
 			"!package.json",
 			"!**/node_modules",
 			"!**/dist",
-			"!**/*.html"
+			"!**/*.html",
+			"!**/.wrangler"
 		]
 	}
 }
