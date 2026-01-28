@@ -23,7 +23,8 @@ interface Chunk {
 	sectionId: string;
 	sectionTitle: string;
 	content: string;
-	contentType: "text" | "xml_example" | "table";
+	embeddingText?: string;
+	contentType: "text";
 	pageNumber: number;
 	chunkIndex: number;
 }
@@ -59,7 +60,7 @@ async function embedChunks(chunks: Chunk[], provider: EmbeddingProvider): Promis
 
 	for (let i = 0; i < chunks.length; i += batchSize) {
 		const batch = chunks.slice(i, i + batchSize);
-		const texts = batch.map((c) => c.content);
+		const texts = batch.map((c) => c.embeddingText ?? c.content);
 
 		try {
 			const embeddings = await client.embedBatch(texts);

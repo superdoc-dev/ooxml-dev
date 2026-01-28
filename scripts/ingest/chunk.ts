@@ -25,7 +25,8 @@ interface Chunk {
 	sectionId: string;
 	sectionTitle: string;
 	content: string;
-	contentType: "text" | "xml_example" | "table";
+	embeddingText: string;
+	contentType: "text";
 	pageNumber: number;
 	chunkIndex: number;
 }
@@ -43,43 +44,24 @@ const XML_PATTERN = /<[^>]+>[\s\S]*?<\/[^>]+>/g;
 // Table pattern (markdown tables with | separators)
 const TABLE_PATTERN = /\|[^\n]+\|(?:\n\|[^\n]+\|)+/g;
 
-function extractCodeBlocks(content: string): {
-	codeBlocks: string[];
-	tables: string[];
-	textContent: string;
-} {
-	const codeBlocks: string[] = [];
-	const tables: string[] = [];
-	let textContent = content;
+/**
+ * Strip code blocks, XML, and tables from content for embedding generation.
+ * Returns text-only version suitable for semantic search embeddings.
+ */
+function stripForEmbedding(content: string): string {
+	let text = content;
 
-	// Extract markdown code fences first (pymupdf4llm format)
-	const fenceMatches = textContent.match(CODE_FENCE_PATTERN) || [];
-	for (const match of fenceMatches) {
-		if (match.length > 50) {
-			codeBlocks.push(match);
-			textContent = textContent.replace(match, "\n[CODE_BLOCK]\n");
-		}
-	}
+	// Strip markdown code fences
+	text = text.replace(CODE_FENCE_PATTERN, " ");
 
-	// Extract any remaining raw XML blocks
-	const xmlMatches = textContent.match(XML_PATTERN) || [];
-	for (const match of xmlMatches) {
-		if (match.length > 50) {
-			codeBlocks.push(match);
-			textContent = textContent.replace(match, "\n[CODE_BLOCK]\n");
-		}
-	}
+	// Strip raw XML blocks
+	text = text.replace(XML_PATTERN, " ");
 
-	// Extract markdown tables
-	const tableMatches = textContent.match(TABLE_PATTERN) || [];
-	for (const match of tableMatches) {
-		if (match.length > 50) {
-			tables.push(match);
-			textContent = textContent.replace(match, "\n[TABLE]\n");
-		}
-	}
+	// Strip markdown tables
+	text = text.replace(TABLE_PATTERN, " ");
 
-	return { codeBlocks, tables, textContent };
+	// Collapse whitespace
+	return text.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function splitIntoChunks(
@@ -90,40 +72,12 @@ function splitIntoChunks(
 ): Chunk[] {
 	const chunks: Chunk[] = [];
 
-	// Extract code blocks and tables first
-	const { codeBlocks, tables, textContent } = extractCodeBlocks(text);
-
-	// Add code blocks as separate chunks
-	for (const code of codeBlocks) {
-		chunks.push({
-			sectionId,
-			sectionTitle,
-			content: code,
-			contentType: "xml_example",
-			pageNumber: pageStart,
-			chunkIndex: chunks.length,
-		});
-	}
-
-	// Add tables as separate chunks
-	for (const table of tables) {
-		chunks.push({
-			sectionId,
-			sectionTitle,
-			content: table,
-			contentType: "table",
-			pageNumber: pageStart,
-			chunkIndex: chunks.length,
-		});
-	}
-
-	// Split remaining text into chunks
-	if (textContent.trim().length === 0) {
+	if (text.trim().length === 0) {
 		return chunks;
 	}
 
-	// Split by paragraphs first
-	const paragraphs = textContent.split(/\n\n+/);
+	// Split full content (with code blocks and tables inline) by paragraphs
+	const paragraphs = text.split(/\n\n+/);
 	let currentChunk = "";
 	const currentPage = pageStart;
 
@@ -135,10 +89,12 @@ function splitIntoChunks(
 		if (currentChunk.length + trimmedPara.length > CHUNK_SIZE) {
 			// Save current chunk if it has content
 			if (currentChunk.trim()) {
+				const content = currentChunk.trim();
 				chunks.push({
 					sectionId,
 					sectionTitle,
-					content: currentChunk.trim(),
+					content,
+					embeddingText: stripForEmbedding(content),
 					contentType: "text",
 					pageNumber: currentPage,
 					chunkIndex: chunks.length,
@@ -155,10 +111,12 @@ function splitIntoChunks(
 
 	// Don't forget the last chunk
 	if (currentChunk.trim()) {
+		const content = currentChunk.trim();
 		chunks.push({
 			sectionId,
 			sectionTitle,
-			content: currentChunk.trim(),
+			content,
+			embeddingText: stripForEmbedding(content),
 			contentType: "text",
 			pageNumber: currentPage,
 			chunkIndex: chunks.length,
@@ -211,17 +169,17 @@ async function main() {
 		console.log(`\nSaved ${chunks.length} chunks to ${outputFile}`);
 
 		// Print stats
-		const textChunks = chunks.filter((c) => c.contentType === "text");
-		const xmlChunks = chunks.filter((c) => c.contentType === "xml_example");
-		const tableChunks = chunks.filter((c) => c.contentType === "table");
+		const avgContent = Math.round(
+			chunks.reduce((sum, c) => sum + c.content.length, 0) / chunks.length,
+		);
+		const avgEmbedding = Math.round(
+			chunks.reduce((sum, c) => sum + c.embeddingText.length, 0) / chunks.length,
+		);
 
 		console.log("\nChunk statistics:");
-		console.log(`  Text chunks: ${textChunks.length}`);
-		console.log(`  XML example chunks: ${xmlChunks.length}`);
-		console.log(`  Table chunks: ${tableChunks.length}`);
-		console.log(
-			`  Average text chunk size: ${Math.round(textChunks.reduce((sum, c) => sum + c.content.length, 0) / textChunks.length)} chars`,
-		);
+		console.log(`  Total chunks: ${chunks.length}`);
+		console.log(`  Average content size: ${avgContent} chars`);
+		console.log(`  Average embedding text size: ${avgEmbedding} chars`);
 	} catch (error) {
 		console.error("Chunking failed:", error);
 		process.exit(1);
