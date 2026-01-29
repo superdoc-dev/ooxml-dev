@@ -26,55 +26,111 @@ const PART_DESCRIPTIONS: Record<number, string> = {
 	4: "Transitional Migration Features",
 };
 
+// CORS allowed origins
+const ALLOWED_ORIGINS = ["https://ooxml.dev", "https://www.ooxml.dev"];
+const DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
+
+function getCorsHeaders(request: Request, env: Env): Record<string, string> {
+	const origin = request.headers.get("Origin");
+	if (!origin) return {};
+
+	// Check if origin is allowed
+	const isProduction = !env.DATABASE_URL.includes("localhost");
+	const allowedOrigins = isProduction ? ALLOWED_ORIGINS : [...ALLOWED_ORIGINS, ...DEV_ORIGINS];
+
+	if (allowedOrigins.includes(origin)) {
+		return {
+			"Access-Control-Allow-Origin": origin,
+			"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+			"Access-Control-Allow-Headers": "Content-Type",
+		};
+	}
+
+	return {};
+}
+
+function addCorsHeaders(response: Response, corsHeaders: Record<string, string>): Response {
+	if (Object.keys(corsHeaders).length === 0) return response;
+
+	const newHeaders = new Headers(response.headers);
+	for (const [key, value] of Object.entries(corsHeaders)) {
+		newHeaders.set(key, value);
+	}
+	return new Response(response.body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers: newHeaders,
+	});
+}
+
 export default {
 	async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
 		const url = new URL(request.url);
+		const corsHeaders = getCorsHeaders(request, env);
+
+		// Handle CORS preflight
+		if (request.method === "OPTIONS") {
+			return new Response(null, {
+				status: 204,
+				headers: corsHeaders,
+			});
+		}
 
 		// Health check
 		if (url.pathname === "/health") {
-			return new Response(JSON.stringify({ status: "ok" }), {
-				headers: { "Content-Type": "application/json" },
-			});
+			return addCorsHeaders(
+				new Response(JSON.stringify({ status: "ok" }), {
+					headers: { "Content-Type": "application/json" },
+				}),
+				corsHeaders,
+			);
 		}
 
 		// MCP endpoint
 		if (url.pathname === "/mcp" || url.pathname === "/sse") {
 			if (request.method === "POST") {
 				// MCP protocol (JSON-RPC)
-				return handleMcpRequest(request, env);
+				const response = await handleMcpRequest(request, env);
+				return addCorsHeaders(response, corsHeaders);
 			}
 			// GET returns server info for debugging
-			return handleMcpInfo();
+			return addCorsHeaders(handleMcpInfo(), corsHeaders);
 		}
 
 		// REST API endpoints
 		if (url.pathname === "/search" && request.method === "POST") {
-			return handleSearch(request, env);
+			const response = await handleSearch(request, env);
+			return addCorsHeaders(response, corsHeaders);
 		}
 
 		if (url.pathname === "/section" && request.method === "GET") {
-			return handleGetSection(request, env);
+			const response = await handleGetSection(request, env);
+			return addCorsHeaders(response, corsHeaders);
 		}
 
 		if (url.pathname === "/stats") {
-			return handleStats(env);
+			const response = await handleStats(env);
+			return addCorsHeaders(response, corsHeaders);
 		}
 
-		return new Response(
-			JSON.stringify({
-				name: "ECMA-376 Spec MCP Server",
-				version: "0.1.0",
-				endpoints: {
-					mcp: "/mcp",
-					health: "/health",
-					search: "POST /search",
-					section: "GET /section?id=17.3.2&part=1",
-					stats: "/stats",
+		return addCorsHeaders(
+			new Response(
+				JSON.stringify({
+					name: "ECMA-376 Spec MCP Server",
+					version: "0.1.0",
+					endpoints: {
+						mcp: "/mcp",
+						health: "/health",
+						search: "POST /search",
+						section: "GET /section?id=17.3.2&part=1",
+						stats: "/stats",
+					},
+				}),
+				{
+					headers: { "Content-Type": "application/json" },
 				},
-			}),
-			{
-				headers: { "Content-Type": "application/json" },
-			},
+			),
+			corsHeaders,
 		);
 	},
 };
