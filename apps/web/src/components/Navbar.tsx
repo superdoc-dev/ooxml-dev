@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Menu, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
@@ -7,9 +7,10 @@ import logo from "../assets/logo.png";
 interface NavbarProps {
 	sticky?: boolean;
 	maxWidth?: boolean;
+	onSearchClick?: () => void;
 }
 
-export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
+export function Navbar({ sticky = false, maxWidth = false, onSearchClick }: NavbarProps) {
 	const location = useLocation();
 	const isDocsActive = location.pathname.startsWith("/docs");
 	const isMcpActive = location.pathname === "/mcp";
@@ -50,8 +51,18 @@ export function Navbar({ sticky = false, maxWidth = false }: NavbarProps) {
 					</div>
 				</nav>
 
-				{/* Mobile menu button */}
-				<div className="flex items-center gap-2 sm:hidden">
+				{/* Mobile buttons */}
+				<div className="flex items-center gap-1 sm:hidden">
+					{onSearchClick && (
+						<button
+							type="button"
+							onClick={onSearchClick}
+							className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
+							aria-label="Search"
+						>
+							<Search size={20} />
+						</button>
+					)}
 					<button
 						type="button"
 						onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
