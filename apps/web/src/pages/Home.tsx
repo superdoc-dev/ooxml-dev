@@ -26,17 +26,19 @@ export function Home() {
 					</Link>
 				</div>
 
-				{/* MCP Callout */}
+				{/* Spec Explorer Callout */}
 				<div className="flex items-center justify-center gap-2 text-sm">
 					<span className="bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] font-medium px-1.5 py-0.5 rounded">
 						NEW
 					</span>
-					<span className="text-[var(--color-text-secondary)]">Search the spec via MCP</span>
+					<span className="text-[var(--color-text-secondary)]">
+						AI-powered spec search with PDF viewer
+					</span>
 					<Link
-						to="/mcp"
+						to="/spec"
 						className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-medium text-xs"
 					>
-						Learn more →
+						Try it →
 					</Link>
 				</div>
 			</main>

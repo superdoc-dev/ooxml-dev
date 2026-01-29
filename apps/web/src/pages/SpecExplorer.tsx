@@ -36,7 +36,7 @@ const DEFAULT_PDF_URL = "https://cdn.ooxml.dev/ecma-376/part1.pdf";
 
 export function SpecExplorer() {
 	const [search, setSearch] = useState("");
-	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const [submittedSearch, setSubmittedSearch] = useState("");
 	const [results, setResults] = useState<SpecSearchResult[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [selectedIndex, setSelectedIndex] = useState(0);
@@ -56,60 +56,54 @@ export function SpecExplorer() {
 		};
 	}, []);
 
-	// Debounce search input
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearch(search);
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [search]);
+	// Submit search
+	const handleSubmit = useCallback(async () => {
+		const query = search.trim();
+		if (!query || query === submittedSearch) return;
 
-	// Search when debounced value changes
-	useEffect(() => {
-		if (!debouncedSearch.trim()) {
-			setResults([]);
-			return;
-		}
+		setSubmittedSearch(query);
+		setIsLoading(true);
 
-		const doSearch = async () => {
-			setIsLoading(true);
-			try {
-				const res = await fetch(`${import.meta.env.VITE_API_URL}/search`, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ query: debouncedSearch, limit: 10 }),
-				});
-				const data: MCPSearchResponse = await res.json();
+		try {
+			const res = await fetch(`${import.meta.env.VITE_API_URL}/search`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ query, limit: 10 }),
+			});
+			const data: MCPSearchResponse = await res.json();
 
-				const transformed: SpecSearchResult[] = data.results.map((r) => ({
-					id: `spec-${r.id}`,
-					sectionId: r.sectionId || "",
-					title: r.title || r.content.slice(0, 60),
-					description: r.title ? r.content.slice(0, 120) : undefined,
-					partNumber: r.partNumber,
-					pageNumber: r.pageNumber,
-					pdfUrl: null,
-				}));
+			const transformed: SpecSearchResult[] = data.results.map((r) => ({
+				id: `spec-${r.id}`,
+				sectionId: r.sectionId || "",
+				title: r.title || r.content.slice(0, 60),
+				description: r.title ? r.content.slice(0, 120) : undefined,
+				partNumber: r.partNumber,
+				pageNumber: r.pageNumber,
+			}));
 
-				setResults(transformed);
-				setSelectedIndex(0);
-			} catch (err) {
-				console.error("Search failed:", err);
-				setResults([]);
-			} finally {
-				setIsLoading(false);
+			setResults(transformed);
+			setSelectedIndex(0);
+			if (transformed.length > 0) {
+				setSelectedResult(transformed[0]);
 			}
-		};
-
-		doSearch();
-	}, [debouncedSearch]);
-
-	// Select first result when results change
-	useEffect(() => {
-		if (results.length > 0 && !selectedResult) {
-			setSelectedResult(results[0]);
+		} catch (err) {
+			console.error("Search failed:", err);
+			setResults([]);
+		} finally {
+			setIsLoading(false);
 		}
-	}, [results, selectedResult]);
+	}, [search, submittedSearch]);
+
+	// Handle Enter key to submit
+	const handleKeyDown = useCallback(
+		(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+			if (e.key === "Enter" && !e.shiftKey) {
+				e.preventDefault();
+				handleSubmit();
+			}
+		},
+		[handleSubmit],
+	);
 
 	// Scroll selected item into view
 	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally scroll when selectedIndex changes
@@ -172,13 +166,18 @@ export function SpecExplorer() {
 							ref={inputRef}
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
+							onKeyDown={handleKeyDown}
 							placeholder="Ask about the ECMA-376 spec..."
 							rows={2}
 							className="w-full resize-none rounded-lg border border-[var(--color-border)] bg-transparent px-4 py-3 text-sm leading-relaxed outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-text-primary)] focus:shadow-[0_0_0_3px_rgba(0,0,0,0.05)]"
 							autoFocus
 						/>
 						<div className="mt-2 text-[11px] text-[var(--color-text-muted)]">
-							Try natural language like "how to set paragraph margins"
+							Press{" "}
+							<kbd className="rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-1">
+								Enter
+							</kbd>{" "}
+							to search
 						</div>
 					</div>
 
@@ -199,14 +198,14 @@ export function SpecExplorer() {
 						)}
 
 						{/* Empty state */}
-						{!isLoading && !search && (
+						{!isLoading && !submittedSearch && (
 							<div className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
 								Search the ECMA-376 specification
 							</div>
 						)}
 
 						{/* No results */}
-						{!isLoading && search && results.length === 0 && debouncedSearch === search && (
+						{!isLoading && submittedSearch && results.length === 0 && (
 							<div className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
 								No results found
 							</div>

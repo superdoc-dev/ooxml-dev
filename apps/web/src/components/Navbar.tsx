@@ -34,17 +34,17 @@ export function Navbar({ sticky = false, maxWidth = false, onSearchClick }: Navb
 					<NavLink to="/docs" active={isDocsActive}>
 						Reference
 					</NavLink>
-					<NavLink to="/spec" active={isSpecActive}>
-						Spec
-					</NavLink>
 					<div className="flex items-center gap-1">
-						<NavLink to="/mcp" active={isMcpActive}>
-							MCP
+						<NavLink to="/spec" active={isSpecActive}>
+							Spec
 						</NavLink>
 						<span className="rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)]">
 							new
 						</span>
 					</div>
+					<NavLink to="/mcp" active={isMcpActive}>
+						MCP
+					</NavLink>
 					<div className="flex items-center gap-1">
 						<NavLink to="#" active={false} disabled>
 							Playground
@@ -84,17 +84,17 @@ export function Navbar({ sticky = false, maxWidth = false, onSearchClick }: Navb
 					<NavLink to="/docs" active={isDocsActive} onClick={() => setMobileMenuOpen(false)}>
 						Reference
 					</NavLink>
-					<NavLink to="/spec" active={isSpecActive} onClick={() => setMobileMenuOpen(false)}>
-						Spec
-					</NavLink>
 					<div className="flex items-center gap-1">
-						<NavLink to="/mcp" active={isMcpActive} onClick={() => setMobileMenuOpen(false)}>
-							MCP
+						<NavLink to="/spec" active={isSpecActive} onClick={() => setMobileMenuOpen(false)}>
+							Spec
 						</NavLink>
 						<span className="rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)]">
 							new
 						</span>
 					</div>
+					<NavLink to="/mcp" active={isMcpActive} onClick={() => setMobileMenuOpen(false)}>
+						MCP
+					</NavLink>
 					<div className="flex items-center gap-1">
 						<NavLink to="#" active={false} disabled>
 							Playground
