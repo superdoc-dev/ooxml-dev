@@ -9,21 +9,32 @@ interface MCPSearchResult {
 	title: string | null;
 	content: string;
 	contentType: string;
+	pageNumber: number | null;
 	score: number;
 }
+
+// PDF URLs for each part (hosted on our CDN)
+const PDF_URLS: Record<number, string> = {
+	1: "https://cdn.ooxml.dev/ecma-376/part1.pdf",
+	2: "https://cdn.ooxml.dev/ecma-376/part2.pdf",
+	3: "https://cdn.ooxml.dev/ecma-376/part3.pdf",
+	4: "https://cdn.ooxml.dev/ecma-376/part4.pdf",
+};
 
 interface MCPSearchResponse {
 	query: string;
 	results: MCPSearchResult[];
 }
 
-// Extended result type with section ID for display
+// Extended result type with section ID and PDF link
 export interface SpecSearchResult {
 	id: string;
-	url: string;
 	sectionId: string;
 	title: string;
 	description?: string;
+	partNumber: number;
+	pageNumber: number | null;
+	pdfUrl: string | null;
 }
 
 // Local docs search result
@@ -117,20 +128,28 @@ export function useSpecSearch() {
 		setSpecSearchTriggered(true);
 
 		try {
-			const res = await fetch("https://api.ooxml.dev/search", {
+			const res = await fetch(`${import.meta.env.VITE_API_URL}/search`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ query, limit: 10 }),
 			});
 			const data: MCPSearchResponse = await res.json();
 
-			const transformed: SpecSearchResult[] = data.results.map((r) => ({
-				id: `spec-${r.id}`,
-				url: r.sectionId ? `/docs/${r.sectionId}` : "#",
-				sectionId: r.sectionId || "",
-				title: r.title || r.content.slice(0, 60),
-				description: r.title ? r.content.slice(0, 80) : undefined,
-			}));
+			const transformed: SpecSearchResult[] = data.results.map((r) => {
+				const pdfBase = PDF_URLS[r.partNumber];
+				const pdfUrl =
+					pdfBase && r.pageNumber ? `${pdfBase}#page=${r.pageNumber}` : pdfBase || null;
+
+				return {
+					id: `spec-${r.id}`,
+					sectionId: r.sectionId || "",
+					title: r.title || r.content.slice(0, 60),
+					description: r.title ? r.content.slice(0, 80) : undefined,
+					partNumber: r.partNumber,
+					pageNumber: r.pageNumber,
+					pdfUrl,
+				};
+			});
 
 			setSpecResults(transformed);
 		} catch (err) {

@@ -78,6 +78,7 @@ async function main() {
 				title: chunk.sectionTitle,
 				content: chunk.content,
 				contentType: chunk.contentType,
+				pageNumber: chunk.pageNumber,
 				embedding: chunk.embedding,
 			}));
 

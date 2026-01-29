@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Navbar } from "../components/Navbar";
 
-const MCP_ENDPOINT = "https://api.ooxml.dev/mcp";
+const MCP_ENDPOINT = `${import.meta.env.VITE_API_URL}/mcp`;
 const CLAUDE_COMMAND = `claude mcp add --transport http ecma-spec ${MCP_ENDPOINT}`;
 
 const TOOLS = [

@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { FileText, Hash, Loader2, Search } from "lucide-react";
+import { ExternalLink, FileText, Hash, Loader2, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSpecSearch } from "../hooks/useSpecSearch";
@@ -88,7 +88,10 @@ export function SpecSearchDialog({ open, onOpenChange }: Props) {
 					if (activeTab === "docs") {
 						navigate((result as (typeof localResults)[number]).url);
 					} else {
-						navigate((result as (typeof specResults)[number]).url);
+						const specResult = result as (typeof specResults)[number];
+						if (specResult.pdfUrl) {
+							window.open(specResult.pdfUrl, "_blank");
+						}
 					}
 				}
 			}
@@ -233,9 +236,11 @@ export function SpecSearchDialog({ open, onOpenChange }: Props) {
 
 								{hasSpecResults &&
 									specResults.map((result, idx) => (
-										<Link
+										<a
 											key={result.id}
-											to={result.url}
+											href={result.pdfUrl || "#"}
+											target="_blank"
+											rel="noopener noreferrer"
 											onClick={() => onOpenChange(false)}
 											data-selected={idx === selectedIndex}
 											onMouseEnter={() => setSelectedIndex(idx)}
@@ -246,8 +251,8 @@ export function SpecSearchDialog({ open, onOpenChange }: Props) {
 													: "hover:bg-[var(--color-bg-secondary)]",
 											)}
 										>
-											<span className="text-sm text-[var(--color-text-muted)] font-mono w-24 flex-shrink-0">
-												{result.sectionId}
+											<span className="text-sm text-[var(--color-text-muted)] font-mono w-20 flex-shrink-0">
+												§ {result.sectionId}
 											</span>
 											<div className="min-w-0 flex-1">
 												<div className="font-medium text-[var(--color-text-primary)]">
@@ -259,7 +264,15 @@ export function SpecSearchDialog({ open, onOpenChange }: Props) {
 													</div>
 												)}
 											</div>
-										</Link>
+											<div className="flex items-center gap-2 flex-shrink-0">
+												{result.pageNumber && (
+													<span className="text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded">
+														Page {result.pageNumber}
+													</span>
+												)}
+												<ExternalLink size={14} className="text-[var(--color-text-muted)]" />
+											</div>
+										</a>
 									))}
 
 								{!isLoading && !hasSpecResults && specSearchTriggered && (

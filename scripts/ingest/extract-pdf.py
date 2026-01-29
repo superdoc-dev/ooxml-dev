@@ -111,14 +111,22 @@ def parse_sections(md_text: str, start_page: int) -> list[dict]:
     sections = []
 
     # Section patterns for ECMA-376
+    # Only match BOLD section headers (actual sections, not TOC entries)
     patterns = [
         # Main section with bold: **12.3.2** **Title**
-        r'^\*\*(\d+(?:\.\d+)*)\*\*\s*\*\*([^*]+)\*\*',
-        # Main section without bold: 12.3.2 Title
-        r'^(\d+(?:\.\d+)*)\s+([A-Z][^\n]+)',
-        # Annex: Annex A (normative) or **Annex A**
-        r'^\*?(Annex\s+[A-Z])\*?\s*(?:\(([^)]+)\))?\s*(.*)$',
+        r'^\*\*(\d+(?:\.\d+)*)\*\*\s*\*\*([^*]+)\*\*$',
+        # Annex with bold: **Annex A** **(normative)** or **Annex A (informative)**
+        r'^\*\*(Annex\s+[A-Z])\*\*\s*(?:\*\*)?(?:\(([^)]+)\))?(?:\*\*)?\s*(.*)$',
     ]
+
+    # TOC pattern to skip (has page number at end: "17.3.2 Title ... 264")
+    toc_pattern = r'^\d+(?:\.\d+)*\s+.+\.{2,}\s*\d+$'
+
+    # Page number patterns from pymupdf4llm output
+    # Arabic numerals (main content): standalone line with just digits
+    arabic_page_pattern = r'^(\d+)$'
+    # Header/footer line to skip
+    header_pattern = r'^ECMA-376 Part \d'
 
     lines = md_text.split('\n')
     current_section = None
@@ -126,20 +134,28 @@ def parse_sections(md_text: str, start_page: int) -> list[dict]:
     current_page = start_page
 
     for line in lines:
-        # Track page numbers (pymupdf4llm includes page breaks)
-        if line.strip().isdigit() and len(line.strip()) <= 4:
-            # Could be a page number
-            try:
-                page_num = int(line.strip())
-                if page_num > current_page and page_num < current_page + 10:
-                    current_page = page_num
-            except ValueError:
-                pass
+        stripped = line.strip()
 
-        # Check for section headers
+        # Skip header/footer lines
+        if re.match(header_pattern, stripped):
+            continue
+
+        # Track page numbers - standalone arabic numerals
+        if re.match(arabic_page_pattern, stripped):
+            page_num = int(stripped)
+            # Sanity check: page should increase or be close to current
+            if page_num >= current_page and page_num < current_page + 50:
+                current_page = page_num
+                continue  # Don't include page number in content
+
+        # Skip TOC entries (have page numbers at the end with dots)
+        if re.match(toc_pattern, stripped):
+            continue
+
+        # Check for section headers (bold only - actual sections)
         section_match = None
         for pattern in patterns:
-            match = re.match(pattern, line.strip(), re.IGNORECASE)
+            match = re.match(pattern, stripped, re.IGNORECASE)
             if match:
                 section_match = match
                 break
@@ -148,7 +164,7 @@ def parse_sections(md_text: str, start_page: int) -> list[dict]:
             # Save previous section
             if current_section:
                 current_section["content"] = '\n'.join(current_content).strip()
-                current_section["pageEnd"] = current_page
+                current_section["pageEnd"] = current_page + 1  # +1 to match TOC
                 sections.append(current_section)
 
             # Start new section
@@ -168,8 +184,8 @@ def parse_sections(md_text: str, start_page: int) -> list[dict]:
             current_section = {
                 "sectionId": section_id,
                 "title": (title or "").strip(),
-                "pageStart": current_page,
-                "pageEnd": current_page,
+                "pageStart": current_page + 1,  # +1 to match TOC page numbers
+                "pageEnd": current_page + 1,
                 "content": "",
                 "depth": depth,
                 "parentId": parent_id,
@@ -181,7 +197,7 @@ def parse_sections(md_text: str, start_page: int) -> list[dict]:
     # Don't forget the last section
     if current_section:
         current_section["content"] = '\n'.join(current_content).strip()
-        current_section["pageEnd"] = current_page
+        current_section["pageEnd"] = current_page + 1  # +1 to match TOC
         sections.append(current_section)
 
     return sections

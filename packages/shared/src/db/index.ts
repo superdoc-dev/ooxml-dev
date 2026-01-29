@@ -16,13 +16,14 @@ export function createDbClient(connectionString: string) {
 		// Insert content
 		async insert(content: Omit<SpecContent, "id">) {
 			const [result] = await sql<[{ id: number }]>`
-				INSERT INTO spec_content (part_number, section_id, title, content, content_type, embedding)
+				INSERT INTO spec_content (part_number, section_id, title, content, content_type, page_number, embedding)
 				VALUES (
 					${content.partNumber},
 					${content.sectionId},
 					${content.title},
 					${content.content},
 					${content.contentType},
+					${content.pageNumber},
 					${content.embedding ? `[${content.embedding.join(",")}]` : null}
 				)
 				RETURNING id
@@ -38,6 +39,7 @@ export function createDbClient(connectionString: string) {
 				title: item.title,
 				content: item.content,
 				content_type: item.contentType,
+				page_number: item.pageNumber,
 				embedding: item.embedding ? `[${item.embedding.join(",")}]` : null,
 			}));
 
@@ -73,11 +75,12 @@ export function createDbClient(connectionString: string) {
 					title: string | null;
 					content: string;
 					content_type: string;
+					page_number: number | null;
 					score: number;
 				}>
 			>`
 				SELECT
-					id, part_number, section_id, title, content, content_type,
+					id, part_number, section_id, title, content, content_type, page_number,
 					1 - (embedding <=> ${embeddingStr}::vector) as score
 				FROM spec_content
 				WHERE embedding IS NOT NULL
@@ -94,6 +97,7 @@ export function createDbClient(connectionString: string) {
 				title: r.title,
 				content: r.content,
 				contentType: r.content_type,
+				pageNumber: r.page_number,
 				score: r.score,
 			}));
 		},
@@ -108,9 +112,10 @@ export function createDbClient(connectionString: string) {
 					title: string | null;
 					content: string;
 					content_type: string;
+					page_number: number | null;
 				}>
 			>`
-				SELECT id, part_number, section_id, title, content, content_type
+				SELECT id, part_number, section_id, title, content, content_type, page_number
 				FROM spec_content
 				WHERE part_number = ${partNumber} AND section_id = ${sectionId}
 				ORDER BY id
@@ -123,6 +128,7 @@ export function createDbClient(connectionString: string) {
 				title: r.title,
 				content: r.content,
 				contentType: r.content_type,
+				pageNumber: r.page_number,
 			}));
 		},
 

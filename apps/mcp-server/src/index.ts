@@ -30,13 +30,12 @@ const PART_DESCRIPTIONS: Record<number, string> = {
 const ALLOWED_ORIGINS = ["https://ooxml.dev", "https://www.ooxml.dev"];
 const DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
-function getCorsHeaders(request: Request, env: Env): Record<string, string> {
+function getCorsHeaders(request: Request, _env: Env): Record<string, string> {
 	const origin = request.headers.get("Origin");
 	if (!origin) return {};
 
-	// Check if origin is allowed
-	const isProduction = !env.DATABASE_URL.includes("localhost");
-	const allowedOrigins = isProduction ? ALLOWED_ORIGINS : [...ALLOWED_ORIGINS, ...DEV_ORIGINS];
+	// Always allow localhost origins (safe - can only be used when running locally)
+	const allowedOrigins = [...ALLOWED_ORIGINS, ...DEV_ORIGINS];
 
 	if (allowedOrigins.includes(origin)) {
 		return {

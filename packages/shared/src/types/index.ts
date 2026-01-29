@@ -7,6 +7,7 @@ export interface SpecContent {
 	title: string | null;
 	content: string;
 	contentType: string;
+	pageNumber: number | null;
 	embedding?: number[];
 }
 

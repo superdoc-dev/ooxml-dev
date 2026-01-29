@@ -11,6 +11,7 @@ export interface SearchResult {
 	title: string | null;
 	content: string;
 	contentType: string;
+	pageNumber: number | null;
 	score: number;
 }
 
@@ -39,7 +40,7 @@ export function createDb(connectionString: string) {
 			let results: Record<string, unknown>[];
 			if (partNumber !== undefined && contentType) {
 				results = await sql`
-					SELECT id, part_number, section_id, title, content, content_type,
+					SELECT id, part_number, section_id, title, content, content_type, page_number,
 						1 - (embedding <=> ${embeddingStr}::vector) as score
 					FROM spec_content
 					WHERE embedding IS NOT NULL
@@ -50,7 +51,7 @@ export function createDb(connectionString: string) {
 				`;
 			} else if (partNumber !== undefined) {
 				results = await sql`
-					SELECT id, part_number, section_id, title, content, content_type,
+					SELECT id, part_number, section_id, title, content, content_type, page_number,
 						1 - (embedding <=> ${embeddingStr}::vector) as score
 					FROM spec_content
 					WHERE embedding IS NOT NULL
@@ -60,7 +61,7 @@ export function createDb(connectionString: string) {
 				`;
 			} else if (contentType) {
 				results = await sql`
-					SELECT id, part_number, section_id, title, content, content_type,
+					SELECT id, part_number, section_id, title, content, content_type, page_number,
 						1 - (embedding <=> ${embeddingStr}::vector) as score
 					FROM spec_content
 					WHERE embedding IS NOT NULL
@@ -70,7 +71,7 @@ export function createDb(connectionString: string) {
 				`;
 			} else {
 				results = await sql`
-					SELECT id, part_number, section_id, title, content, content_type,
+					SELECT id, part_number, section_id, title, content, content_type, page_number,
 						1 - (embedding <=> ${embeddingStr}::vector) as score
 					FROM spec_content
 					WHERE embedding IS NOT NULL
@@ -86,6 +87,7 @@ export function createDb(connectionString: string) {
 				title: r.title as string | null,
 				content: r.content as string,
 				contentType: r.content_type as string,
+				pageNumber: r.page_number as number | null,
 				score: r.score as number,
 			}));
 		},

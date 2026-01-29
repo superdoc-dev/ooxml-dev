@@ -11,6 +11,7 @@ CREATE TABLE spec_content (
   title TEXT,
   content TEXT NOT NULL,
   content_type TEXT DEFAULT 'text',
+  page_number INT,
   embedding vector(1024),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
