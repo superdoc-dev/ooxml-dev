@@ -167,83 +167,87 @@ export function SpecExplorer() {
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							onKeyDown={handleKeyDown}
-							placeholder="Ask about the ECMA-376 spec..."
+							placeholder="e.g. paragraph spacing, table borders, how to style text runs..."
 							rows={2}
 							className="w-full resize-none rounded-lg border border-[var(--color-border)] bg-transparent px-4 py-3 text-sm leading-relaxed outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-text-primary)] focus:shadow-[0_0_0_3px_rgba(0,0,0,0.05)]"
 							autoFocus
 						/>
-						<div className="mt-2 text-[11px] text-[var(--color-text-muted)]">
-							Press{" "}
-							<kbd className="rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-1">
-								Enter
-							</kbd>{" "}
-							to search
+						<div className="mt-2 flex items-center justify-between text-[11px] text-[var(--color-text-muted)]">
+							<span>Use natural language or element names</span>
+							<span>
+								<kbd className="rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-1.5 py-0.5">
+									↵
+								</kbd>
+							</span>
 						</div>
 					</div>
 
 					{/* Results */}
-					<div ref={resultsRef} className="min-h-0 flex-1 overflow-y-auto">
-						{/* Results count */}
-						{results.length > 0 && (
-							<div className="px-5 pb-2 text-xs text-[var(--color-text-muted)]">
-								{results.length} results
-							</div>
-						)}
-
-						{/* Loading state */}
-						{isLoading && (
-							<div className="flex items-center justify-center py-12">
-								<Loader2 size={24} className="animate-spin text-[var(--color-text-muted)]" />
-							</div>
-						)}
-
-						{/* Empty state */}
-						{!isLoading && !submittedSearch && (
-							<div className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
-								Search the ECMA-376 specification
-							</div>
-						)}
-
-						{/* No results */}
-						{!isLoading && submittedSearch && results.length === 0 && (
-							<div className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
-								No results found
-							</div>
-						)}
-
-						{/* Results list */}
-						{results.map((result, idx) => (
-							<button
-								key={result.id}
-								type="button"
-								data-selected={idx === selectedIndex}
-								onClick={() => handleSelectResult(result, idx)}
-								onMouseEnter={() => setSelectedIndex(idx)}
-								className={clsx(
-									"w-full cursor-pointer border-b border-[var(--color-bg-tertiary)] px-5 py-3 text-left transition",
-									idx === selectedIndex
-										? "bg-[var(--color-bg-tertiary)]"
-										: "hover:bg-[var(--color-bg-secondary)]",
-								)}
-							>
-								<div className="flex items-baseline gap-2">
-									<span className="shrink-0 font-mono text-[11px] font-medium text-[var(--color-accent)]">
-										§{result.sectionId}
-									</span>
-									<span className="truncate text-sm font-medium text-[var(--color-text-primary)]">
-										{result.title}
-									</span>
+					<div className="relative min-h-0 flex-1">
+						<div ref={resultsRef} className="h-full overflow-y-auto">
+							{/* Results count */}
+							{results.length > 0 && (
+								<div className="px-5 pb-2 text-xs text-[var(--color-text-muted)]">
+									{results.length} results
 								</div>
-								{result.description && (
-									<div className="mt-1 line-clamp-1 text-xs text-[var(--color-text-muted)]">
-										{result.description}
+							)}
+
+							{/* Empty state */}
+							{!isLoading && !submittedSearch && (
+								<div className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
+									Search the ECMA-376 specification
+								</div>
+							)}
+
+							{/* No results */}
+							{!isLoading && submittedSearch && results.length === 0 && (
+								<div className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
+									No results found
+								</div>
+							)}
+
+							{/* Results list */}
+							{results.map((result, idx) => (
+								<button
+									key={result.id}
+									type="button"
+									data-selected={idx === selectedIndex}
+									onClick={() => handleSelectResult(result, idx)}
+									onMouseEnter={() => setSelectedIndex(idx)}
+									className={clsx(
+										"w-full cursor-pointer border-b border-[var(--color-bg-tertiary)] px-5 py-3 text-left transition",
+										idx === selectedIndex
+											? "bg-[var(--color-bg-tertiary)]"
+											: "hover:bg-[var(--color-bg-secondary)]",
+									)}
+								>
+									<div className="flex items-baseline gap-2">
+										<span className="shrink-0 font-mono text-[11px] font-medium text-[var(--color-accent)]">
+											§{result.sectionId}
+										</span>
+										<span className="truncate text-sm font-medium text-[var(--color-text-primary)]">
+											{result.title}
+										</span>
 									</div>
-								)}
-								<div className="mt-1.5 text-[10px] text-[var(--color-text-muted)]">
-									Part {result.partNumber} · Page {result.pageNumber || "—"}
-								</div>
-							</button>
-						))}
+									{result.description && (
+										<div className="mt-1 line-clamp-1 text-xs text-[var(--color-text-muted)]">
+											{result.description}
+										</div>
+									)}
+									<div className="mt-1.5 text-[10px] text-[var(--color-text-muted)]">
+										Part {result.partNumber} · Page {result.pageNumber || "—"}
+									</div>
+								</button>
+							))}
+						</div>
+
+						{/* Loading overlay */}
+						{isLoading && (
+							<div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/85">
+								<Loader2 size={28} className="animate-spin text-[var(--color-accent)]" />
+								<span className="text-sm text-[var(--color-text-secondary)]">Searching...</span>
+							</div>
+						)}
 					</div>
 				</div>
 
