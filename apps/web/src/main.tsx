@@ -5,6 +5,7 @@ import { DocsLayout } from "./pages/docs/Layout";
 import { DocsPage } from "./pages/docs/Page";
 import { Home } from "./pages/Home";
 import { Mcp } from "./pages/Mcp";
+import { SpecExplorer } from "./pages/SpecExplorer";
 import "./index.css";
 
 const router = createBrowserRouter([
@@ -13,6 +14,7 @@ const router = createBrowserRouter([
 		children: [
 			{ path: "/", element: <Home /> },
 			{ path: "/mcp", element: <Mcp /> },
+			{ path: "/spec", element: <SpecExplorer /> },
 			{
 				path: "/docs",
 				element: <DocsLayout />,

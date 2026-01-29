@@ -13,6 +13,7 @@ interface NavbarProps {
 export function Navbar({ sticky = false, maxWidth = false, onSearchClick }: NavbarProps) {
 	const location = useLocation();
 	const isDocsActive = location.pathname.startsWith("/docs");
+	const isSpecActive = location.pathname === "/spec";
 	const isMcpActive = location.pathname === "/mcp";
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -32,6 +33,9 @@ export function Navbar({ sticky = false, maxWidth = false, onSearchClick }: Navb
 				<nav className="hidden items-center gap-4 sm:flex">
 					<NavLink to="/docs" active={isDocsActive}>
 						Reference
+					</NavLink>
+					<NavLink to="/spec" active={isSpecActive}>
+						Spec
 					</NavLink>
 					<div className="flex items-center gap-1">
 						<NavLink to="/mcp" active={isMcpActive}>
@@ -79,6 +83,9 @@ export function Navbar({ sticky = false, maxWidth = false, onSearchClick }: Navb
 				<nav className="mt-3 flex flex-col gap-1 border-t border-[var(--color-border)] pt-3 sm:hidden">
 					<NavLink to="/docs" active={isDocsActive} onClick={() => setMobileMenuOpen(false)}>
 						Reference
+					</NavLink>
+					<NavLink to="/spec" active={isSpecActive} onClick={() => setMobileMenuOpen(false)}>
+						Spec
 					</NavLink>
 					<div className="flex items-center gap-1">
 						<NavLink to="/mcp" active={isMcpActive} onClick={() => setMobileMenuOpen(false)}>
