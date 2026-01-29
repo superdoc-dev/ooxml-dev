@@ -37,7 +37,7 @@
 			"scripts/**",
 			"*.json",
 			"*.ts",
-			"!package.json",
+			"!**/package.json",
 			"!**/node_modules",
 			"!**/dist",
 			"!**/*.html",
