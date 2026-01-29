@@ -3,7 +3,6 @@ import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navbar } from "../components/Navbar";
 import { PdfViewer } from "../components/PdfViewer";
-import type { SpecSearchResult } from "../hooks/useSpecSearch";
 
 // MCP server response type
 interface MCPSearchResult {
@@ -20,6 +19,16 @@ interface MCPSearchResult {
 interface MCPSearchResponse {
 	query: string;
 	results: MCPSearchResult[];
+}
+
+// Search result type
+interface SpecSearchResult {
+	id: string;
+	sectionId: string;
+	title: string;
+	description?: string;
+	partNumber: number;
+	pageNumber: number | null;
 }
 
 // Default PDF URL for preloading
