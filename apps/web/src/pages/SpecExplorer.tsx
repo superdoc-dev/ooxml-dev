@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Navbar } from "../components/Navbar";
 import { PdfViewer } from "../components/PdfViewer";
 
@@ -35,7 +36,9 @@ interface SpecSearchResult {
 const DEFAULT_PDF_URL = "https://cdn.ooxml.dev/ecma-376/part1.pdf";
 
 export function SpecExplorer() {
-	const [search, setSearch] = useState("");
+	const [searchParams] = useSearchParams();
+	const initialQuery = searchParams.get("q") || "";
+	const [search, setSearch] = useState(initialQuery);
 	const [submittedSearch, setSubmittedSearch] = useState("");
 	const [results, setResults] = useState<SpecSearchResult[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
@@ -43,6 +46,7 @@ export function SpecExplorer() {
 	const [selectedResult, setSelectedResult] = useState<SpecSearchResult | null>(null);
 	const resultsRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
+	const hasAutoSearched = useRef(false);
 
 	// Preload the default PDF
 	useEffect(() => {
@@ -93,6 +97,14 @@ export function SpecExplorer() {
 			setIsLoading(false);
 		}
 	}, [search, submittedSearch]);
+
+	// Auto-search if query param provided (e.g., ?q=w:shd)
+	useEffect(() => {
+		if (initialQuery && !hasAutoSearched.current) {
+			hasAutoSearched.current = true;
+			handleSubmit();
+		}
+	}, [initialQuery, handleSubmit]);
 
 	// Handle Enter key to submit
 	const handleKeyDown = useCallback(
