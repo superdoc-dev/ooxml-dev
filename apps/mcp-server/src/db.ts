@@ -22,6 +22,7 @@ export interface SpecContent {
 	title: string | null;
 	content: string;
 	contentType: string;
+	pageNumber: number | null;
 }
 
 export function createDb(connectionString: string) {
@@ -99,7 +100,7 @@ export function createDb(connectionString: string) {
 
 			if (partNumber !== undefined) {
 				results = await sql`
-					SELECT id, part_number, section_id, title, content, content_type
+					SELECT id, part_number, section_id, title, content, content_type, page_number
 					FROM spec_content
 					WHERE section_id LIKE ${pattern}
 						AND part_number = ${partNumber}
@@ -107,7 +108,7 @@ export function createDb(connectionString: string) {
 				`;
 			} else {
 				results = await sql`
-					SELECT id, part_number, section_id, title, content, content_type
+					SELECT id, part_number, section_id, title, content, content_type, page_number
 					FROM spec_content
 					WHERE section_id LIKE ${pattern}
 					ORDER BY section_id, id
@@ -121,6 +122,7 @@ export function createDb(connectionString: string) {
 				title: r.title as string | null,
 				content: r.content as string,
 				contentType: r.content_type as string,
+				pageNumber: r.page_number as number | null,
 			}));
 		},
 
