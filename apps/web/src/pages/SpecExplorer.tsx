@@ -108,7 +108,7 @@ export function SpecExplorer() {
 			const params = new URLSearchParams({ id: initialSection });
 			if (initialPart) params.set("part", initialPart);
 			const res = await fetch(`${import.meta.env.VITE_API_URL}/section?${params}`);
-			const data = await res.json() as { results: MCPSearchResult[] };
+			const data = (await res.json()) as { results: MCPSearchResult[] };
 
 			const transformed: SpecSearchResult[] = (data.results || []).map((r: MCPSearchResult) => ({
 				id: `spec-${r.id}`,

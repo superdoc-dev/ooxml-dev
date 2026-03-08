@@ -11,7 +11,12 @@ const NAV_SECTIONS = [
 		title: "WordprocessingML",
 		items: [
 			{ to: "/docs/paragraphs", label: "Paragraphs", path: "paragraphs" },
-			{ to: "/docs/paragraph-borders", label: "Paragraph Borders", path: "paragraph-borders", isNew: true },
+			{
+				to: "/docs/paragraph-borders",
+				label: "Paragraph Borders",
+				path: "paragraph-borders",
+				isNew: true,
+			},
 			{ to: "/docs/tables", label: "Tables", path: "tables" },
 			{ to: "/docs/styles", label: "Styles", path: "styles", disabled: true },
 		],
@@ -68,7 +73,7 @@ export function Sidebar({ onSearchClick }: SidebarProps) {
 									label={item.label}
 									active={currentPath === item.path}
 									disabled={item.disabled}
-								isNew={item.isNew}
+									isNew={item.isNew}
 								/>
 							))}
 						</ul>

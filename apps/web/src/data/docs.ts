@@ -413,7 +413,7 @@ Each border element has:
 				type: "note",
 				noteType: "warning",
 				title: "The space attribute and unit mismatch",
-				text: 'The `space` attribute sets the distance (in points) between a border\'s inner edge and the text. For between borders, this padding applies on both sides — above and below. Note that `sz` uses a different unit: eighths of a point (`sz="12"` = 1.5pt). Easy to mix up since they\'re on the same element.',
+				text: "The `space` attribute sets the distance (in points) between a border's inner edge and the text. For between borders, this padding applies on both sides — above and below. Note that `sz` uses a different unit: eighths of a point (`sz=\"12\"` = 1.5pt). Easy to mix up since they're on the same element.",
 				app: "Word",
 			},
 			{ type: "heading", level: 2, text: "Schema" },
@@ -433,7 +433,11 @@ Each border element has:
 				type: "table",
 				headers: ["Attribute", "Type", "Description"],
 				rows: [
-					["`w:val`", "ST_Border", "Border style — single, double, dashed, dotted, nil, none, etc."],
+					[
+						"`w:val`",
+						"ST_Border",
+						"Border style — single, double, dashed, dotted, nil, none, etc.",
+					],
 					["`w:sz`", "integer", "Width in 1/8 of a point (e.g., 12 = 1.5pt)"],
 					["`w:space`", "integer", "Distance from text to border inner edge, in points"],
 					["`w:color`", "hex", "Border color (e.g., 000000, auto)"],
