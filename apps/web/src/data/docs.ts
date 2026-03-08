@@ -271,6 +271,183 @@ export const docs: Record<string, DocPage> = {
 		],
 	},
 
+	"paragraph-borders": {
+		title: "Paragraph Borders",
+		description:
+			"Borders and shading around paragraphs — side borders, between-border groups, and the space attribute.",
+		badge: "w:pBdr",
+		content: [
+			{
+				type: "paragraph",
+				text: "Paragraph borders (`w:pBdr`) draw border lines around paragraphs and can group consecutive paragraphs into a single bordered box. The spec reads straightforward, but Word's rendering rules have several gotchas that aren't documented.",
+			},
+			{ type: "heading", level: 2, text: "Structure" },
+			{
+				type: "code",
+				code: `w:pPr (paragraph properties)
+└── w:pBdr (paragraph borders)
+    ├── w:top (top border)
+    ├── w:bottom (bottom border)
+    ├── w:left (left border)
+    ├── w:right (right border)
+    ├── w:between (between border — separator within groups)
+    └── w:bar (vertical bar border)
+
+Each border element has:
+├── @w:val     Border style (single, double, dashed, dotted, nil, none...)
+├── @w:sz      Width in 1/8 of a point (sz="12" → 1.5pt)
+├── @w:space   Distance from text to border, in points
+└── @w:color   Hex color (e.g., "000000")`,
+			},
+			{ type: "heading", level: 2, text: "Basic Example" },
+			{
+				type: "preview",
+				title: "Paragraph with all four borders",
+				xml: `<w:p>
+  <w:pPr>
+    <w:pBdr>
+      <w:top w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:left w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+      <w:bottom w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:right w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+    </w:pBdr>
+  </w:pPr>
+  <w:r><w:t>A paragraph with borders on all four sides.</w:t></w:r>
+</w:p>`,
+			},
+			{ type: "heading", level: 2, text: "Between Border Groups" },
+			{
+				type: "paragraph",
+				text: "When consecutive paragraphs have identical border definitions AND include a `w:between` element, Word groups them into a single bordered box. The between border draws as a horizontal separator between group members.",
+			},
+			{
+				type: "preview",
+				title: "Two paragraphs grouped with a between border",
+				xml: `<w:p>
+  <w:pPr>
+    <w:pBdr>
+      <w:top w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:left w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+      <w:bottom w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:right w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+      <w:between w:val="single" w:sz="6" w:space="1" w:color="000000"/>
+    </w:pBdr>
+  </w:pPr>
+  <w:r><w:t>First paragraph in the group.</w:t></w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:pBdr>
+      <w:top w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:left w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+      <w:bottom w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:right w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+      <w:between w:val="single" w:sz="6" w:space="1" w:color="000000"/>
+    </w:pBdr>
+  </w:pPr>
+  <w:r><w:t>Second paragraph — between border separates them.</w:t></w:r>
+</w:p>`,
+			},
+			{ type: "heading", level: 2, text: "Nil/None Between — Grouping Without a Separator" },
+			{
+				type: "paragraph",
+				text: 'Setting `w:between` to `val="nil"` or `val="none"` does NOT mean "don\'t group." It means "group these paragraphs but don\'t draw a separator." The result is a single continuous bordered box with no divider between paragraphs.',
+			},
+			{
+				type: "preview",
+				title: "Grouped paragraphs with no separator (nil between)",
+				xml: `<w:p>
+  <w:pPr>
+    <w:pBdr>
+      <w:top w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:left w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+      <w:bottom w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:right w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+      <w:between w:val="nil"/>
+    </w:pBdr>
+  </w:pPr>
+  <w:r><w:t>First paragraph — no between separator.</w:t></w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:pBdr>
+      <w:top w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:left w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+      <w:bottom w:val="single" w:sz="12" w:space="1" w:color="000000"/>
+      <w:right w:val="single" w:sz="12" w:space="4" w:color="000000"/>
+      <w:between w:val="nil"/>
+    </w:pBdr>
+  </w:pPr>
+  <w:r><w:t>Second paragraph — continuous box, no divider.</w:t></w:r>
+</w:p>`,
+			},
+			{ type: "heading", level: 2, text: "How Word Renders Groups" },
+			{
+				type: "paragraph",
+				text: "The spec describes `w:between` but doesn't spell out the rendering rules. Here's what Word actually does with a group of 3 paragraphs:",
+			},
+			{
+				type: "code",
+				code: `┌─────────────────────────────┐  ← top border (from A)
+│ Paragraph A text            │
+├─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┤  ← between border
+│ Paragraph B text            │
+├─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┤  ← between border
+│ Paragraph C text            │
+└─────────────────────────────┘  ← bottom border (from C)
+
+- A: top + left + right + between-as-bottom
+- B: left + right + between-as-bottom (top suppressed)
+- C: left + right + bottom (top suppressed)
+- Left/right borders bridge paragraph spacing gaps`,
+			},
+			{ type: "heading", level: 2, text: "Implementation Notes" },
+			{
+				type: "note",
+				noteType: "critical",
+				title: "How between-border grouping works",
+				text: 'Consecutive paragraphs form a group when they all have a `w:between` element AND all border properties match (top, bottom, left, right, between). Crucially, `val="nil"` or `val="none"` still triggers grouping — it means "group without a separator," not "don\'t group." If you normalize nil/none to `undefined` during parsing, you lose the grouping signal entirely.',
+				app: "Word",
+			},
+			{
+				type: "note",
+				noteType: "warning",
+				title: "The space attribute and unit mismatch",
+				text: 'The `space` attribute sets the distance (in points) between a border\'s inner edge and the text. For between borders, this padding applies on both sides — above and below. Note that `sz` uses a different unit: eighths of a point (`sz="12"` = 1.5pt). Easy to mix up since they\'re on the same element.',
+				app: "Word",
+			},
+			{ type: "heading", level: 2, text: "Schema" },
+			{
+				type: "table",
+				headers: ["Element", "Description"],
+				rows: [
+					["`w:top`", "Top border"],
+					["`w:bottom`", "Bottom border"],
+					["`w:left`", "Left border"],
+					["`w:right`", "Right border"],
+					["`w:between`", "Border between grouped paragraphs"],
+					["`w:bar`", "Vertical bar border (drawn outside the paragraph)"],
+				],
+			},
+			{
+				type: "table",
+				headers: ["Attribute", "Type", "Description"],
+				rows: [
+					["`w:val`", "ST_Border", "Border style — single, double, dashed, dotted, nil, none, etc."],
+					["`w:sz`", "integer", "Width in 1/8 of a point (e.g., 12 = 1.5pt)"],
+					["`w:space`", "integer", "Distance from text to border inner edge, in points"],
+					["`w:color`", "hex", "Border color (e.g., 000000, auto)"],
+					["`w:shadow`", "boolean", "Shadow effect on the border"],
+					["`w:frame`", "boolean", "Frame effect on the border"],
+				],
+			},
+			{
+				type: "paragraph",
+				text: "Spec reference: ECMA-376 [§17.3.1.24 (pBdr)](/spec?section=17.3.1.24&part=1), [§17.3.1.7 (bottom border)](/spec?section=17.3.1.7&part=1), [§17.3.1.31 (shd)](/spec?section=17.3.1.31&part=1)",
+			},
+		],
+	},
+
 	"creating-documents": {
 		title: "Creating Documents",
 		description: "Step-by-step guide to creating a valid OOXML document from scratch.",

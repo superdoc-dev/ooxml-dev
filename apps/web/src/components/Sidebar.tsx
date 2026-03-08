@@ -11,6 +11,7 @@ const NAV_SECTIONS = [
 		title: "WordprocessingML",
 		items: [
 			{ to: "/docs/paragraphs", label: "Paragraphs", path: "paragraphs" },
+			{ to: "/docs/paragraph-borders", label: "Paragraph Borders", path: "paragraph-borders", isNew: true },
 			{ to: "/docs/tables", label: "Tables", path: "tables" },
 			{ to: "/docs/styles", label: "Styles", path: "styles", disabled: true },
 		],
@@ -67,6 +68,7 @@ export function Sidebar({ onSearchClick }: SidebarProps) {
 									label={item.label}
 									active={currentPath === item.path}
 									disabled={item.disabled}
+								isNew={item.isNew}
 								/>
 							))}
 						</ul>
@@ -118,12 +120,14 @@ function SidebarLink({
 	label,
 	active,
 	disabled,
+	isNew,
 	onClick,
 }: {
 	to: string;
 	label: string;
 	active: boolean;
 	disabled?: boolean;
+	isNew?: boolean;
 	onClick?: () => void;
 }) {
 	if (disabled) {
@@ -153,7 +157,16 @@ function SidebarLink({
 						: "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]",
 				)}
 			>
-				{label}
+				{isNew ? (
+					<span className="relative pr-8">
+						{label}
+						<span className="absolute -top-1 right-0 rounded bg-[var(--color-accent)]/15 px-1 py-0.5 text-[8px] font-medium text-[var(--color-accent)]">
+							new
+						</span>
+					</span>
+				) : (
+					label
+				)}
 			</Link>
 		</li>
 	);

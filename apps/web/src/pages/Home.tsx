@@ -26,19 +26,19 @@ export function Home() {
 					</Link>
 				</div>
 
-				{/* Spec Explorer Callout */}
+				{/* New Content Callout */}
 				<div className="flex items-center justify-center gap-2 text-sm">
 					<span className="bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] font-medium px-1.5 py-0.5 rounded">
 						NEW
 					</span>
 					<span className="text-[var(--color-text-secondary)]">
-						AI-powered spec search with PDF viewer
+						Paragraph Borders - between-border groups, nil/none semantics, and rendering gotchas
 					</span>
 					<Link
-						to="/spec"
+						to="/docs/paragraph-borders"
 						className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-medium text-xs"
 					>
-						Try it →
+						Read it →
 					</Link>
 				</div>
 			</main>

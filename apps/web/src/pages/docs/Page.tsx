@@ -107,7 +107,7 @@ function ContentBlock({ block }: { block: DocPage["content"][number] }) {
 								<tr key={i}>
 									{row.map((cell, j) => (
 										<td key={j} className="border border-[var(--color-border)] px-4 py-2">
-											{cell}
+											<InlineMarkdown text={cell} />
 										</td>
 									))}
 								</tr>

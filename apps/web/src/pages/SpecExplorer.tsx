@@ -38,6 +38,8 @@ const DEFAULT_PDF_URL = "https://cdn.ooxml.dev/ecma-376/part1.pdf";
 export function SpecExplorer() {
 	const [searchParams] = useSearchParams();
 	const initialQuery = searchParams.get("q") || "";
+	const initialSection = searchParams.get("section") || "";
+	const initialPart = searchParams.get("part") || "";
 	const [search, setSearch] = useState(initialQuery);
 	const [submittedSearch, setSubmittedSearch] = useState("");
 	const [results, setResults] = useState<SpecSearchResult[]>([]);
@@ -98,13 +100,50 @@ export function SpecExplorer() {
 		}
 	}, [search, submittedSearch]);
 
-	// Auto-search if query param provided (e.g., ?q=w:shd)
+	// Fetch a specific section by ID (e.g., ?section=17.3.1.24&part=1)
+	const handleSectionLookup = useCallback(async () => {
+		if (!initialSection) return;
+		setIsLoading(true);
+		try {
+			const params = new URLSearchParams({ id: initialSection });
+			if (initialPart) params.set("part", initialPart);
+			const res = await fetch(`${import.meta.env.VITE_API_URL}/section?${params}`);
+			const data = await res.json() as { results: MCPSearchResult[] };
+
+			const transformed: SpecSearchResult[] = (data.results || []).map((r: MCPSearchResult) => ({
+				id: `spec-${r.id}`,
+				sectionId: r.sectionId || initialSection,
+				title: r.title || r.content.slice(0, 60),
+				description: r.title ? r.content.slice(0, 120) : undefined,
+				partNumber: r.partNumber,
+				pageNumber: r.pageNumber,
+			}));
+
+			setResults(transformed);
+			setSearch(initialSection);
+			setSubmittedSearch(initialSection);
+			setSelectedIndex(0);
+			if (transformed.length > 0) {
+				setSelectedResult(transformed[0]);
+			}
+		} catch (err) {
+			console.error("Section lookup failed:", err);
+		} finally {
+			setIsLoading(false);
+		}
+	}, [initialSection, initialPart]);
+
+	// Auto-search or section lookup on load
 	useEffect(() => {
-		if (initialQuery && !hasAutoSearched.current) {
-			hasAutoSearched.current = true;
+		if (hasAutoSearched.current) return;
+		hasAutoSearched.current = true;
+
+		if (initialSection) {
+			handleSectionLookup();
+		} else if (initialQuery) {
 			handleSubmit();
 		}
-	}, [initialQuery, handleSubmit]);
+	}, [initialSection, initialQuery, handleSectionLookup, handleSubmit]);
 
 	// Handle Enter key to submit
 	const handleKeyDown = useCallback(
