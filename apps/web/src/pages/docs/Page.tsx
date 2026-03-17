@@ -12,7 +12,9 @@ interface DocsPageProps {
 export function DocsPage({ slug: propSlug }: DocsPageProps) {
 	const location = useLocation();
 	const slug =
-		propSlug || location.pathname.replace("/docs/", "").replace("/docs", "index") || "index";
+		propSlug ||
+		location.pathname.replace(/\/+$/, "").replace("/docs/", "").replace("/docs", "index") ||
+		"index";
 
 	const page = docs[slug as keyof typeof docs];
 	const seo = getSeoMeta(slug === "index" ? "/docs" : `/docs/${slug}`);
