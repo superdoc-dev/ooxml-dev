@@ -33,7 +33,7 @@ export const docs: Record<string, DocPage> = {
 			{ type: "heading", level: 2, text: "What's Different Here" },
 			{
 				type: "paragraph",
-				text: "Unlike the official spec, this reference shows live previews, includes real implementation notes from building [SuperDoc](https://superdoc.dev), and links to 100k+ real documents from [docx-corpus](https://docxcorp.us).",
+				text: "Unlike the official spec, this reference shows live previews, includes real implementation notes from building [SuperDoc](https://superdoc.dev/?utm_source=ooxml.dev&utm_medium=referral&utm_campaign=docs), and links to 100k+ real documents from [docx-corpus](https://docxcorp.us).",
 			},
 			{ type: "heading", level: 2, text: "OOXML Structure" },
 			{
@@ -506,7 +506,7 @@ Each border element has:
 		content: [
 			{
 				type: "paragraph",
-				text: "Lessons learned from building [SuperDoc](https://superdoc.dev).",
+				text: "Lessons learned from building [SuperDoc](https://superdoc.dev/?utm_source=ooxml.dev&utm_medium=referral&utm_campaign=docs).",
 			},
 			{ type: "heading", level: 2, text: "Word-Specific Issues" },
 			{

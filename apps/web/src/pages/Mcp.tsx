@@ -228,7 +228,7 @@ export function Mcp() {
 					<span className="text-sm text-[var(--color-text-muted)]">
 						Built by 🦋{" "}
 						<a
-							href="https://superdoc.dev"
+							href="https://superdoc.dev/?utm_source=ooxml.dev&utm_medium=referral&utm_campaign=mcp-page"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="text-[var(--color-accent)] hover:underline"
