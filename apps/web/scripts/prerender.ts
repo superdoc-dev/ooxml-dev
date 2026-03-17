@@ -112,7 +112,9 @@ function specPageHtml(): string {
 
 function buildHead(path: string): string {
 	const seo = getSeoMeta(path);
-	const url = `${SITE_URL}${path}`;
+	// Cloudflare Pages adds trailing slashes via 308 redirect, so canonical must match
+	const canonicalPath = path === "/" ? path : `${path}/`;
+	const url = `${SITE_URL}${canonicalPath}`;
 
 	const meta = [
 		`<title>${escapeHtml(seo.title)}</title>`,
@@ -207,8 +209,9 @@ function generateSitemap(paths: string[]): string {
 	const urls = paths.map((path) => {
 		const priority = path === "/" ? "1.0" : path.startsWith("/docs/") ? "0.8" : "0.7";
 		const changefreq = path === "/" ? "weekly" : "monthly";
+		const loc = path === "/" ? SITE_URL + path : `${SITE_URL}${path}/`;
 		return `  <url>
-    <loc>${SITE_URL}${path}</loc>
+    <loc>${loc}</loc>
     <changefreq>${changefreq}</changefreq>
     <priority>${priority}</priority>
   </url>`;
