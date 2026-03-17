@@ -223,6 +223,29 @@ ${urls.join("\n")}
 </urlset>`;
 }
 
+// --- 404 page ---
+
+function render404Page(): string {
+	const title = "Page Not Found | ooxml.dev";
+	const description = "The page you're looking for doesn't exist.";
+	const content = `<main style="max-width:640px;margin:0 auto;padding:4rem 1rem;text-align:center">
+<h1 style="font-size:2rem;font-weight:bold;margin-bottom:1rem">404 — Page Not Found</h1>
+<p style="margin-bottom:2rem;opacity:0.7">The page you're looking for doesn't exist or has been moved.</p>
+<a href="/" style="color:inherit;text-decoration:underline">Go to homepage</a>
+<span style="margin:0 0.5rem;opacity:0.5">·</span>
+<a href="/docs" style="color:inherit;text-decoration:underline">Browse docs</a>
+</main>`;
+
+	let html = template;
+	html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)}</title>`);
+	html = html.replace(
+		"</head>",
+		`    <meta name="description" content="${escapeHtml(description)}"/>\n    <meta name="robots" content="noindex"/>\n  </head>`,
+	);
+	html = html.replace('<div id="root"></div>', `<div id="root">${content}</div>`);
+	return html;
+}
+
 // --- Main ---
 
 const paths = getAllPaths();
@@ -239,9 +262,14 @@ for (const path of paths) {
 	console.log(`  ✓ ${path}`);
 }
 
+// Generate 404 page (Cloudflare Pages serves this with 404 status)
+const notFoundHtml = render404Page();
+writeFileSync(resolve(DIST, "404.html"), notFoundHtml);
+console.log(`  ✓ /404.html`);
+
 // Generate sitemap
 const sitemap = generateSitemap(paths);
 writeFileSync(resolve(DIST, "sitemap.xml"), sitemap);
 console.log(`  ✓ /sitemap.xml`);
 
-console.log(`\nPre-rendered ${count} pages + sitemap.`);
+console.log(`\nPre-rendered ${count} pages + 404 + sitemap.`);

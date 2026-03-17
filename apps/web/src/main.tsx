@@ -5,6 +5,7 @@ import { DocsLayout } from "./pages/docs/Layout";
 import { DocsPage } from "./pages/docs/Page";
 import { Home } from "./pages/Home";
 import { Mcp } from "./pages/Mcp";
+import { NotFound } from "./pages/NotFound";
 import { SpecExplorer } from "./pages/SpecExplorer";
 import "./index.css";
 
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
 					{ path: "*", element: <DocsPage /> },
 				],
 			},
+			{ path: "*", element: <NotFound /> },
 		],
 	},
 ]);

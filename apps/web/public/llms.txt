@@ -1,0 +1,39 @@
+# ooxml.dev
+
+> The OOXML spec, explained by people who actually implemented it.
+
+ooxml.dev is an interactive reference for ECMA-376 (Office Open XML), the standard behind .docx, .xlsx, and .pptx files. It features live previews, real-world implementation gotchas, and AI-powered spec search. Built by the SuperDoc team (https://www.superdoc.dev).
+
+## Main Pages
+
+- [Home](https://ooxml.dev/): Overview and entry point
+- [Docs](https://ooxml.dev/docs/): Interactive OOXML reference documentation
+- [MCP Server](https://ooxml.dev/mcp/): Connect AI assistants to search 18,000+ ECMA-376 specification chunks via MCP
+- [Spec Explorer](https://ooxml.dev/spec/): Search and browse the ECMA-376 specification with semantic search
+
+## Documentation
+
+### Getting Started
+- [Introduction](https://ooxml.dev/docs/): Learn the basics of OOXML and how to use this reference
+
+### WordprocessingML
+- [Paragraphs](https://ooxml.dev/docs/paragraphs/): Text structure and formatting — paragraphs, runs, and text elements (w:p)
+- [Paragraph Borders](https://ooxml.dev/docs/paragraph-borders/): Border properties, between-border groups, nil/none semantics (w:pBdr)
+- [Tables](https://ooxml.dev/docs/tables/): Table structure, properties, and implementation gotchas (w:tbl)
+- [Styles](https://ooxml.dev/docs/styles/): Style definitions, inheritance, and resolution (styles.xml)
+
+### Guides
+- [Creating Documents](https://ooxml.dev/docs/creating-documents/): Step-by-step guide to creating a valid OOXML document from scratch
+- [Common Gotchas](https://ooxml.dev/docs/common-gotchas/): Real-world implementation issues and how to solve them
+
+## MCP Server
+
+The ooxml.dev MCP server provides AI assistants with access to the ECMA-376 specification. Available tools:
+
+- `search_ecma_spec`: Semantic search across 18,000+ specification chunks
+- `get_section`: Retrieve a specific section by ID (e.g., "17.3.2" for paragraph properties)
+- `list_parts`: Browse the specification structure by part (1-4)
+
+## About
+
+ooxml.dev is built and maintained by the SuperDoc team (https://www.superdoc.dev). SuperDoc is a document engine that implements the OOXML specification. The content on ooxml.dev comes from real-world experience building a full OOXML renderer and editor.
