@@ -72,7 +72,42 @@ function docPageToHtml(page: DocPage): string {
 		parts.push(contentBlockToHtml(block));
 	}
 	parts.push(`</article>`);
+	parts.push(navHtml());
 	return parts.join("\n");
+}
+
+// --- Site navigation (crawlable links for search engines) ---
+
+const NAV_SECTIONS = [
+	{
+		title: "Getting Started",
+		items: [{ to: "/docs", label: "Introduction" }],
+	},
+	{
+		title: "WordprocessingML",
+		items: [
+			{ to: "/docs/paragraphs", label: "Paragraphs" },
+			{ to: "/docs/paragraph-borders", label: "Paragraph Borders" },
+			{ to: "/docs/tables", label: "Tables" },
+		],
+	},
+	{
+		title: "Guides",
+		items: [
+			{ to: "/docs/creating-documents", label: "Creating Documents" },
+			{ to: "/docs/common-gotchas", label: "Common Gotchas" },
+		],
+	},
+];
+
+function navHtml(): string {
+	const sections = NAV_SECTIONS.map(
+		(section) =>
+			`<div><strong>${escapeHtml(section.title)}</strong><ul>${section.items
+				.map((item) => `<li><a href="${item.to}">${escapeHtml(item.label)}</a></li>`)
+				.join("")}</ul></div>`,
+	);
+	return `<nav>${sections.join("")}</nav>`;
 }
 
 // --- Static HTML for non-doc pages ---
@@ -83,6 +118,7 @@ function homePageHtml(): string {
 <p>The OOXML spec, explained by people who actually implemented it.</p>
 <p>Interactive examples, real-world gotchas, live previews, and AI-powered search.</p>
 <a href="/docs">Browse Reference</a>
+${navHtml()}
 </main>`;
 }
 
@@ -98,6 +134,7 @@ function mcpPageHtml(): string {
 </ul>
 <h2>What is MCP?</h2>
 <p>The Model Context Protocol (MCP) is an open standard that lets AI assistants connect to external data sources and tools.</p>
+${navHtml()}
 </main>`;
 }
 
@@ -105,6 +142,7 @@ function specPageHtml(): string {
 	return `<main>
 <h1>ECMA-376 Spec Explorer</h1>
 <p>Search and browse the ECMA-376 Office Open XML specification with semantic search and PDF viewer.</p>
+${navHtml()}
 </main>`;
 }
 
