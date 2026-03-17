@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { Navbar } from "../components/Navbar";
+import { getSeoMeta } from "../data/seo";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export function Home() {
+	useDocumentTitle(getSeoMeta("/").title);
 	return (
 		<div className="min-h-screen bg-[var(--color-bg-primary)]">
 			<Navbar maxWidth />

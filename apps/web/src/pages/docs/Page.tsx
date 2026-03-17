@@ -2,6 +2,8 @@ import { useLocation } from "react-router-dom";
 import { ImplementationNote } from "@/components/ImplementationNote";
 import { SuperDocPreview } from "@/components/SuperDocPreview";
 import { type DocPage, docs } from "@/data/docs";
+import { getSeoMeta } from "@/data/seo";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 interface DocsPageProps {
 	slug?: string;
@@ -13,6 +15,8 @@ export function DocsPage({ slug: propSlug }: DocsPageProps) {
 		propSlug || location.pathname.replace("/docs/", "").replace("/docs", "index") || "index";
 
 	const page = docs[slug as keyof typeof docs];
+	const seo = getSeoMeta(slug === "index" ? "/docs" : `/docs/${slug}`);
+	useDocumentTitle(seo.title);
 
 	if (!page) {
 		return (

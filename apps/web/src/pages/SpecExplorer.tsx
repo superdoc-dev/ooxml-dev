@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Navbar } from "../components/Navbar";
 import { PdfViewer } from "../components/PdfViewer";
+import { getSeoMeta } from "../data/seo";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 // MCP server response type
 interface MCPSearchResult {
@@ -36,6 +38,7 @@ interface SpecSearchResult {
 const DEFAULT_PDF_URL = "https://cdn.ooxml.dev/ecma-376/part1.pdf";
 
 export function SpecExplorer() {
+	useDocumentTitle(getSeoMeta("/spec").title);
 	const [searchParams] = useSearchParams();
 	const initialQuery = searchParams.get("q") || "";
 	const initialSection = searchParams.get("section") || "";

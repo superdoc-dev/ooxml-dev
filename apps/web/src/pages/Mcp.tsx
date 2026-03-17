@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Navbar } from "../components/Navbar";
+import { getSeoMeta } from "../data/seo";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const MCP_ENDPOINT = `${import.meta.env.VITE_API_URL}/mcp`;
 const CLAUDE_COMMAND = `claude mcp add --transport http ecma-spec ${MCP_ENDPOINT}`;
@@ -31,6 +33,7 @@ const EXAMPLE_QUERIES = [
 type TabId = "claude" | "cursor" | "other";
 
 export function Mcp() {
+	useDocumentTitle(getSeoMeta("/mcp").title);
 	const [copiedEndpoint, setCopiedEndpoint] = useState(false);
 	const [copiedCommand, setCopiedCommand] = useState(false);
 	const [activeTab, setActiveTab] = useState<TabId>("claude");
