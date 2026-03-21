@@ -15,6 +15,11 @@ const NAV_SECTIONS = [
 				to: "/docs/paragraph-borders",
 				label: "Paragraph Borders",
 				path: "paragraph-borders",
+			},
+			{
+				to: "/docs/bidirectional-text",
+				label: "Bidirectional Text (RTL)",
+				path: "bidirectional-text",
 				isNew: true,
 			},
 			{ to: "/docs/tables", label: "Tables", path: "tables" },

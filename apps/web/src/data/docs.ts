@@ -452,6 +452,248 @@ Each border element has:
 		],
 	},
 
+	"bidirectional-text": {
+		title: "Bidirectional Text (RTL)",
+		description:
+			"Right-to-left paragraph layout, run-level text direction, and how bidi interacts with alignment, indentation, and tab stops.",
+		badge: "w:bidi",
+		content: [
+			{
+				type: "paragraph",
+				text: "Bidirectional (bidi) support in OOXML handles right-to-left scripts like Arabic and Hebrew. It operates at two levels: `w:bidi` sets the paragraph's base direction, and `w:rtl` controls individual run reading order. Getting these right is the difference between text that renders correctly and text that's backwards.",
+			},
+			{ type: "heading", level: 2, text: "Structure" },
+			{
+				type: "code",
+				code: `w:pPr (paragraph properties)
+├── w:bidi          Paragraph base direction (RTL layout)
+├── w:jc            Alignment — start/end are logical, flip with bidi
+├── w:ind           Indentation — start/end flip with bidi
+└── w:tabs
+    └── w:tab       Tab stops — measured from leading edge (right for RTL)
+
+w:rPr (run properties)
+├── w:rtl           Run reading order (right-to-left)
+├── w:cs            Treat run as complex script
+├── w:rFonts        @w:cs — complex script font
+└── w:lang          @w:bidi — bidi language (ar-SA, he-IL, etc.)`,
+			},
+			{ type: "heading", level: 2, text: "Paragraph Direction — w:bidi" },
+			{
+				type: "paragraph",
+				text: "The `w:bidi` element on `w:pPr` sets the paragraph's base direction to right-to-left. This flips four things: indentation (start/end swap sides), alignment (start/end resolve to opposite edges), tab stop measurement (from right edge instead of left), and text flow direction. It does NOT reorder characters within runs — that's `w:rtl`'s job.",
+			},
+			{
+				type: "preview",
+				title: "RTL paragraph with Arabic text",
+				xml: `<w:p>
+  <w:pPr>
+    <w:bidi/>
+  </w:pPr>
+  <w:r>
+    <w:rPr><w:rtl/></w:rPr>
+    <w:t>مرحبا بالعالم</w:t>
+  </w:r>
+  <w:r>
+    <w:t xml:space="preserve"> - Hello World</w:t>
+  </w:r>
+</w:p>`,
+			},
+			{ type: "heading", level: 2, text: "Alignment with Bidi" },
+			{
+				type: "paragraph",
+				text: 'The `w:jc` element uses logical values `start` and `end` that flip based on paragraph direction. `start` means the leading edge: left for LTR, right for RTL. `end` means the trailing edge. The values `left`, `right`, and `center` are always physical and don\'t flip. Arabic justify variants (`lowKashida`, `mediumKashida`, `highKashida`) extend joiners between characters instead of adding word spacing.',
+			},
+			{
+				type: "preview",
+				title: "RTL paragraph with center alignment",
+				xml: `<w:p>
+  <w:pPr>
+    <w:bidi/>
+    <w:jc w:val="center"/>
+  </w:pPr>
+  <w:r>
+    <w:rPr><w:rtl/></w:rPr>
+    <w:t>نص عربي في الوسط</w:t>
+  </w:r>
+</w:p>`,
+			},
+			{
+				type: "preview",
+				title: "RTL paragraph — start alignment resolves to right",
+				xml: `<w:p>
+  <w:pPr>
+    <w:bidi/>
+    <w:jc w:val="start"/>
+  </w:pPr>
+  <w:r>
+    <w:rPr><w:rtl/></w:rPr>
+    <w:t>محاذاة البداية — تعني اليمين في الفقرات العربية</w:t>
+  </w:r>
+</w:p>`,
+			},
+			{
+				type: "table",
+				headers: ["w:jc value", "LTR result", "RTL result"],
+				rows: [
+					["`start`", "Left", "Right"],
+					["`end`", "Right", "Left"],
+					["`center`", "Center", "Center"],
+					["`both`", "Justify (word spacing)", "Justify (word spacing + lowKashida)"],
+					["`left`", "Left", "Left (physical, doesn't flip)"],
+					["`right`", "Right", "Right (physical, doesn't flip)"],
+					["`lowKashida`", "Justify", "Justify (short kashida extension)"],
+					["`mediumKashida`", "Justify", "Justify (medium kashida)"],
+					["`highKashida`", "Justify", "Justify (widest kashida)"],
+					["`distribute`", "Justify (char + word spacing)", "Justify (char + word spacing)"],
+				],
+			},
+			{ type: "heading", level: 2, text: "Indentation with Bidi" },
+			{
+				type: "paragraph",
+				text: "The `w:ind` element uses `start`/`end` attributes that are logical — they refer to the leading and trailing edges of the paragraph. For an RTL paragraph, `start` is the right margin and `end` is the left margin. The `firstLine` and `hanging` attributes also apply relative to the start edge.",
+			},
+			{
+				type: "preview",
+				title: "RTL paragraph with start indent (appears on right side)",
+				xml: `<w:p>
+  <w:pPr>
+    <w:bidi/>
+    <w:ind w:start="720"/>
+  </w:pPr>
+  <w:r>
+    <w:rPr><w:rtl/></w:rPr>
+    <w:t>فقرة مع مسافة بادئة من اليمين</w:t>
+  </w:r>
+</w:p>`,
+			},
+			{ type: "heading", level: 2, text: "Tab Stops with Bidi" },
+			{
+				type: "paragraph",
+				text: "Tab stop positions in RTL paragraphs are measured from the right edge of the text area, not the left. The `w:tab` alignment values `start` and `end` also flip. A `start`-aligned tab in an RTL paragraph aligns text to the right of the tab position.",
+			},
+			{
+				type: "preview",
+				title: "RTL paragraph with dot leader tab stop",
+				xml: `<w:p>
+  <w:pPr>
+    <w:bidi/>
+    <w:tabs>
+      <w:tab w:val="left" w:pos="8640" w:leader="dot"/>
+    </w:tabs>
+  </w:pPr>
+  <w:r>
+    <w:rPr><w:rtl/></w:rPr>
+    <w:t>عنوان الفصل</w:t>
+  </w:r>
+  <w:r><w:tab/></w:r>
+  <w:r>
+    <w:rPr><w:rtl/></w:rPr>
+    <w:t>٤٢</w:t>
+  </w:r>
+</w:p>`,
+			},
+			{ type: "heading", level: 2, text: "Run-Level Direction — w:rtl" },
+			{
+				type: "paragraph",
+				text: "The `w:rtl` element on `w:rPr` sets the reading order of a single run to right-to-left. This is separate from `w:bidi` — you can have an LTR paragraph with RTL runs (inline Arabic in English text) or an RTL paragraph with LTR runs (English words in Arabic text). The spec warns: don't use `w:rtl` on strong LTR characters — behavior is undefined.",
+			},
+			{
+				type: "preview",
+				title: "LTR paragraph with inline Arabic run",
+				xml: `<w:p>
+  <w:r>
+    <w:t xml:space="preserve">English text then </w:t>
+  </w:r>
+  <w:r>
+    <w:rPr><w:rtl/></w:rPr>
+    <w:t>نص عربي</w:t>
+  </w:r>
+  <w:r>
+    <w:t xml:space="preserve"> then English again</w:t>
+  </w:r>
+</w:p>`,
+			},
+			{ type: "heading", level: 2, text: "Mixed Document — RTL and LTR Paragraphs" },
+			{
+				type: "preview",
+				title: "Document with alternating paragraph directions",
+				xml: `<w:p>
+  <w:pPr><w:bidi/></w:pPr>
+  <w:r>
+    <w:rPr><w:rtl/></w:rPr>
+    <w:t>هذه فقرة كاملة باللغة العربية</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:r>
+    <w:t>This is a complete English paragraph</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr><w:bidi/></w:pPr>
+  <w:r>
+    <w:rPr><w:rtl/></w:rPr>
+    <w:t>فقرة عربية أخرى بعد الإنجليزية</w:t>
+  </w:r>
+</w:p>`,
+			},
+			{ type: "heading", level: 2, text: "Implementation Notes" },
+			{
+				type: "note",
+				noteType: "critical",
+				title: "w:bidi and w:rtl are independent",
+				text: "`w:bidi` flips paragraph layout (indentation, alignment, tabs, text direction). `w:rtl` on `w:rPr` controls run reading order. You need both — without `w:rtl` on the runs, text lands in the right position but characters read backwards.",
+			},
+			{
+				type: "note",
+				noteType: "critical",
+				title: "Tab positions are from the right edge in RTL",
+				text: "Tab `pos` is measured from the leading edge (§17.3.1.37). For RTL, that's the right margin. If your layout engine always measures from the left, every RTL tab stop lands on the wrong side.",
+			},
+			{
+				type: "note",
+				noteType: "warning",
+				title: "start/end are logical, left/right are physical",
+				text: "`jc=\"start\"` flips with direction; `jc=\"left\"` does not. Don't resolve `start` → `left` during import — you'll lose the logical intent. Same applies to `w:ind start`/`end` attributes.",
+				app: "Word",
+			},
+			{
+				type: "note",
+				noteType: "info",
+				title: "Section bidi is separate from paragraph bidi",
+				text: "`w:sectPr > w:bidi` controls page chrome (page numbers, column order). It doesn't affect text. You need paragraph-level `w:bidi` for text layout.",
+			},
+			{ type: "heading", level: 2, text: "Schema" },
+			{
+				type: "table",
+				headers: ["Element", "Parent", "Description"],
+				rows: [
+					["`w:bidi`", "`w:pPr`", "Paragraph base direction — sets RTL layout for indentation, alignment, tabs"],
+					["`w:rtl`", "`w:rPr`", "Run reading order — right-to-left character ordering"],
+					["`w:cs`", "`w:rPr`", "Complex script flag — forces complex script font/size"],
+					["`w:bidi`", "`w:sectPr`", "Section layout direction — page-level RTL (separate from paragraph bidi)"],
+				],
+			},
+			{
+				type: "table",
+				headers: ["Attribute / Value", "Context", "Description"],
+				rows: [
+					["`w:jc val=\"start\"`", "`w:pPr`", "Leading edge alignment — left for LTR, right for RTL"],
+					["`w:jc val=\"end\"`", "`w:pPr`", "Trailing edge alignment — right for LTR, left for RTL"],
+					["`w:ind start`", "`w:pPr`", "Leading edge indent — right side for RTL"],
+					["`w:ind end`", "`w:pPr`", "Trailing edge indent — left side for RTL"],
+					["`w:tab pos`", "`w:pPr > w:tabs`", "Tab position from leading edge — from right for RTL"],
+					["`w:lang bidi`", "`w:rPr`", "Bidi language tag (ar-SA, he-IL) — affects neutral char resolution"],
+				],
+			},
+			{
+				type: "paragraph",
+				text: "Spec reference: ECMA-376 [§17.3.1.6 (bidi)](/spec?section=17.3.1.6&part=1), [§17.3.2.30 (rtl)](/spec?section=17.3.2.30&part=1), [§17.3.1.13 (jc)](/spec?section=17.3.1.13&part=1), [§17.18.44 (ST_Jc)](/spec?section=17.18.44&part=1), [§17.3.1.37 (tab)](/spec?section=17.3.1.37&part=1), [§17.3.1.12 (ind)](/spec?section=17.3.1.12&part=1), [§I.2 (Bidi annex)](/spec?section=I.2&part=1)",
+			},
+		],
+	},
+
 	"creating-documents": {
 		title: "Creating Documents",
 		description: "Step-by-step guide to creating a valid OOXML document from scratch.",

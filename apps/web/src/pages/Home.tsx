@@ -35,10 +35,10 @@ export function Home() {
 						NEW
 					</span>
 					<span className="text-[var(--color-text-secondary)]">
-						Paragraph Borders - between-border groups, nil/none semantics, and rendering gotchas
+						Bidirectional Text — RTL layout, logical alignment, tab stop flipping, and bidi pitfalls
 					</span>
 					<Link
-						to="/docs/paragraph-borders"
+						to="/docs/bidirectional-text"
 						className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-medium text-xs"
 					>
 						Read it →
