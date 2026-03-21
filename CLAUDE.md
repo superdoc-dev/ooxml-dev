@@ -6,7 +6,7 @@ An interactive reference for ECMA-376 (Office Open XML) built by the [SuperDoc](
 
 ## Why This Exists
 
-The official ECMA-376 spec is 5,000+ pages. Most of it you'll never need, and the parts you do need often omit critical rendering details that only surface when you compare against Word's actual behavior. This site fills that gap with implementation notes from building SuperDoc — a document editor that renders OOXML natively in the browser.
+The official ECMA-376 spec is 5,000+ pages. Most of it you'll never need, and the parts you do need often omit critical rendering details that only surface when you compare against Word's actual behavior. This site fills that gap with implementation notes from building SuperDoc — a document engine that renders OOXML natively in the browser.
 
 This is also how people discover SuperDoc. By sharing what we've learned, we position ourselves as the OOXML experts. Every page should reflect that authority: practical, specific, from-experience.
 
@@ -97,7 +97,7 @@ The XML you provide is wrapped in a minimal `w:document > w:body` structure auto
 
 ## MCP Server
 
-Cloudflare Worker exposing three MCP tools for AI-powered spec search:
+Cloudflare Worker exposing three MCP tools for semantic spec search:
 
 - `search_ecma_spec` — semantic vector search across 18,000+ spec chunks
 - `get_section` — fetch a specific section by ID (e.g., "17.3.1.24")
