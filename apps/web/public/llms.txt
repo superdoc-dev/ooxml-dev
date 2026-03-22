@@ -2,7 +2,7 @@
 
 > The OOXML spec, explained by people who actually implemented it.
 
-ooxml.dev is an interactive reference for ECMA-376 (Office Open XML), the standard behind .docx, .xlsx, and .pptx files. It features live previews, real-world implementation gotchas, and AI-powered spec search. Built by the SuperDoc team (https://www.superdoc.dev).
+ooxml.dev is an interactive reference for ECMA-376 (Office Open XML), the standard behind .docx, .xlsx, and .pptx files. It features live previews, real-world implementation gotchas, and semantic spec search. Built by the SuperDoc team (https://www.superdoc.dev).
 
 ## Main Pages
 
@@ -36,4 +36,4 @@ The ooxml.dev MCP server provides AI assistants with access to the ECMA-376 spec
 
 ## About
 
-ooxml.dev is built and maintained by the SuperDoc team (https://www.superdoc.dev). SuperDoc is a document engine that implements the OOXML specification. The content on ooxml.dev comes from real-world experience building a full OOXML renderer and editor.
+ooxml.dev is built and maintained by the SuperDoc team (https://www.superdoc.dev). SuperDoc is a document engine that implements the OOXML specification. The content on ooxml.dev comes from real-world experience building a full OOXML document engine.

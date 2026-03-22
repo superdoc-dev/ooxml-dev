@@ -28,7 +28,7 @@ export const docs: Record<string, DocPage> = {
 				type: "note",
 				noteType: "info",
 				title: "Work in Progress",
-				text: "This reference is actively being expanded. We're adding new sections, examples, and implementation notes regularly. Check our [GitHub](https://github.com/superdoc-dev/ooxml-dev) for updates and how to contribute.",
+				text: "This reference is actively being expanded. New sections, examples, and implementation notes land regularly. Check the [GitHub](https://github.com/superdoc-dev/ooxml-dev) for updates and how to contribute.",
 			},
 			{ type: "heading", level: 2, text: "What's Different Here" },
 			{
@@ -502,7 +502,7 @@ w:rPr (run properties)
 			{ type: "heading", level: 2, text: "Alignment with Bidi" },
 			{
 				type: "paragraph",
-				text: 'The `w:jc` element uses logical values `start` and `end` that flip based on paragraph direction. `start` means the leading edge: left for LTR, right for RTL. `end` means the trailing edge. The values `left`, `right`, and `center` are always physical and don\'t flip. Arabic justify variants (`lowKashida`, `mediumKashida`, `highKashida`) extend joiners between characters instead of adding word spacing.',
+				text: "The `w:jc` element uses logical values `start` and `end` that flip based on paragraph direction. `start` means the leading edge: left for LTR, right for RTL. `end` means the trailing edge. The values `left`, `right`, and `center` are always physical and don't flip. Arabic justify variants (`lowKashida`, `mediumKashida`, `highKashida`) extend joiners between characters instead of adding word spacing.",
 			},
 			{
 				type: "preview",
@@ -655,7 +655,7 @@ w:rPr (run properties)
 				type: "note",
 				noteType: "warning",
 				title: "start/end are logical, left/right are physical",
-				text: "`jc=\"start\"` flips with direction; `jc=\"left\"` does not. Don't resolve `start` → `left` during import — you'll lose the logical intent. Same applies to `w:ind start`/`end` attributes.",
+				text: '`jc="start"` flips with direction; `jc="left"` does not. Don\'t resolve `start` → `left` during import — you\'ll lose the logical intent. Same applies to `w:ind start`/`end` attributes.',
 				app: "Word",
 			},
 			{
@@ -669,22 +669,38 @@ w:rPr (run properties)
 				type: "table",
 				headers: ["Element", "Parent", "Description"],
 				rows: [
-					["`w:bidi`", "`w:pPr`", "Paragraph base direction — sets RTL layout for indentation, alignment, tabs"],
+					[
+						"`w:bidi`",
+						"`w:pPr`",
+						"Paragraph base direction — sets RTL layout for indentation, alignment, tabs",
+					],
 					["`w:rtl`", "`w:rPr`", "Run reading order — right-to-left character ordering"],
 					["`w:cs`", "`w:rPr`", "Complex script flag — forces complex script font/size"],
-					["`w:bidi`", "`w:sectPr`", "Section layout direction — page-level RTL (separate from paragraph bidi)"],
+					[
+						"`w:bidi`",
+						"`w:sectPr`",
+						"Section layout direction — page-level RTL (separate from paragraph bidi)",
+					],
 				],
 			},
 			{
 				type: "table",
 				headers: ["Attribute / Value", "Context", "Description"],
 				rows: [
-					["`w:jc val=\"start\"`", "`w:pPr`", "Leading edge alignment — left for LTR, right for RTL"],
-					["`w:jc val=\"end\"`", "`w:pPr`", "Trailing edge alignment — right for LTR, left for RTL"],
+					['`w:jc val="start"`', "`w:pPr`", "Leading edge alignment — left for LTR, right for RTL"],
+					['`w:jc val="end"`', "`w:pPr`", "Trailing edge alignment — right for LTR, left for RTL"],
 					["`w:ind start`", "`w:pPr`", "Leading edge indent — right side for RTL"],
 					["`w:ind end`", "`w:pPr`", "Trailing edge indent — left side for RTL"],
-					["`w:tab pos`", "`w:pPr > w:tabs`", "Tab position from leading edge — from right for RTL"],
-					["`w:lang bidi`", "`w:rPr`", "Bidi language tag (ar-SA, he-IL) — affects neutral char resolution"],
+					[
+						"`w:tab pos`",
+						"`w:pPr > w:tabs`",
+						"Tab position from leading edge — from right for RTL",
+					],
+					[
+						"`w:lang bidi`",
+						"`w:rPr`",
+						"Bidi language tag (ar-SA, he-IL) — affects neutral char resolution",
+					],
 				],
 			},
 			{

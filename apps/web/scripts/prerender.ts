@@ -116,7 +116,7 @@ function homePageHtml(): string {
 	return `<main>
 <h1>ooxml.dev</h1>
 <p>The OOXML spec, explained by people who actually implemented it.</p>
-<p>Interactive examples, real-world gotchas, live previews, and AI-powered search.</p>
+<p>Interactive examples, real-world gotchas, live previews, and semantic spec search.</p>
 <a href="/docs">Browse Reference</a>
 ${navHtml()}
 </main>`;
