@@ -10,7 +10,7 @@ const staticPages: Record<string, SeoMeta> = {
 	"/": {
 		title: "ooxml.dev — The OOXML spec, explained by people who actually implemented it",
 		description:
-			"Interactive ECMA-376 reference with live previews and implementation notes. What the spec doesn't tell you, from the SuperDoc team.",
+			"ECMA-376 reference with live previews and implementation notes from building a real document engine. Built by the SuperDoc team.",
 		type: "website",
 	},
 	"/mcp": {

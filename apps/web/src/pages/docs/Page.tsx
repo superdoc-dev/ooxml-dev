@@ -143,7 +143,7 @@ function InlineMarkdown({ text }: { text: string }) {
 						<a
 							key={i}
 							href={url}
-							className="text-[var(--color-accent)] hover:underline"
+							className="text-[var(--color-accent)] underline decoration-[var(--color-accent)]/30 hover:decoration-[var(--color-accent)]"
 							target={url.startsWith("http") ? "_blank" : undefined}
 							rel={url.startsWith("http") ? "noopener noreferrer" : undefined}
 						>

@@ -207,7 +207,7 @@ export function Mcp() {
 							href="https://modelcontextprotocol.io"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="text-[var(--color-accent)] hover:underline"
+							className="text-[var(--color-accent)] underline decoration-[var(--color-accent)]/30 hover:decoration-[var(--color-accent)]"
 						>
 							Model Context Protocol
 						</a>{" "}
@@ -231,7 +231,7 @@ export function Mcp() {
 							href="https://superdoc.dev/?utm_source=ooxml.dev&utm_medium=referral&utm_campaign=mcp-page"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="text-[var(--color-accent)] hover:underline"
+							className="text-[var(--color-accent)] underline decoration-[var(--color-accent)]/30 hover:decoration-[var(--color-accent)]"
 						>
 							SuperDoc — DOCX editing and tooling
 						</a>
