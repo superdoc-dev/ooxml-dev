@@ -3,9 +3,9 @@
 /* ooxml.dev theme - Blue */
 :root {
 	/* SuperDoc Blue accent */
-	--color-accent: #1355FF;
-	--color-accent-hover: #0F44CC;
-	--color-accent-light: #EFF4FF;
+	--color-accent: #1355ff;
+	--color-accent-hover: #0f44cc;
+	--color-accent-light: #eff4ff;
 
 	/* Backgrounds */
 	--color-bg-primary: #ffffff;
@@ -20,7 +20,7 @@
 	/* Text */
 	--color-text-primary: #1c1917;
 	--color-text-secondary: #57534e;
-	--color-text-muted: #a8a29e;
+	--color-text-muted: #78716c;
 
 	/* Syntax highlighting (for code blocks on dark bg) */
 	--color-syntax-tag: #22d3ee;
