@@ -211,7 +211,7 @@ export function SpecExplorer() {
 		<div className="flex h-screen flex-col overflow-hidden">
 			<Navbar sticky />
 
-			<div className="grid min-h-0 flex-1 grid-cols-[380px_1fr]">
+			<main className="grid min-h-0 flex-1 grid-cols-[380px_1fr]">
 				{/* Search panel */}
 				<div className="flex min-h-0 flex-col border-r border-[var(--color-border)]">
 					{/* Search input */}
@@ -313,7 +313,7 @@ export function SpecExplorer() {
 						onPageChange={handlePageChange}
 					/>
 				</div>
-			</div>
+			</main>
 		</div>
 	);
 }

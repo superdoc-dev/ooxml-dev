@@ -53,7 +53,7 @@ export function ImplementationNote({
 			</div>
 			<div className="flex-1">
 				<div className="flex items-center gap-2">
-					<h4 className="font-semibold text-[var(--color-text-primary)]">{title}</h4>
+					<p className="font-semibold text-[var(--color-text-primary)]">{title}</p>
 					{app && (
 						<span className="rounded bg-[var(--color-bg-tertiary)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]">
 							{app}

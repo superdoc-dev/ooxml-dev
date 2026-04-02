@@ -185,7 +185,7 @@ function buildHead(path: string): string {
 				name: "SuperDoc — DOCX editing and tooling",
 				url: "https://superdoc.dev",
 			},
-			publisher: { "@type": "Organization", name: "ooxml.dev" },
+			publisher: { "@type": "Organization", name: "ooxml.dev", url: "https://ooxml.dev" },
 			about: {
 				"@type": "Thing",
 				name: "Office Open XML",
@@ -204,6 +204,26 @@ function buildHead(path: string): string {
 				"@type": "SearchAction",
 				target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/spec?q={search_term}` },
 				"query-input": "required name=search_term",
+			},
+		};
+		meta.push(`<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`);
+	} else if (path === "/mcp" || path === "/spec") {
+		const jsonLd = {
+			"@context": "https://schema.org",
+			"@type": "WebPage",
+			name: seo.title.split(" | ")[0].split(" — ")[0],
+			description: seo.description,
+			url,
+			author: {
+				"@type": "Organization",
+				name: "SuperDoc — DOCX editing and tooling",
+				url: "https://superdoc.dev",
+			},
+			publisher: { "@type": "Organization", name: "ooxml.dev", url: "https://ooxml.dev" },
+			about: {
+				"@type": "Thing",
+				name: "Office Open XML",
+				sameAs: "https://en.wikipedia.org/wiki/Office_Open_XML",
 			},
 		};
 		meta.push(`<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`);
