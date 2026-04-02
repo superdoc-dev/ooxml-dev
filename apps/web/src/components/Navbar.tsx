@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import { Menu, Search, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo.webp";
 
 interface NavbarProps {
 	sticky?: boolean;
@@ -26,7 +26,7 @@ export function Navbar({ sticky = false, maxWidth = false, onSearchClick }: Navb
 		>
 			<div className={clsx("flex items-center justify-between", maxWidth && "mx-auto max-w-6xl")}>
 				<Link to="/" className="flex shrink-0 items-center">
-					<img src={logo} alt="ooxml.dev" className="h-6" />
+					<img src={logo} alt="ooxml.dev" className="h-6" width={137} height={24} />
 				</Link>
 
 				{/* Desktop navigation */}
