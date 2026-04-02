@@ -43,7 +43,7 @@ export function getSeoMeta(path: string): SeoMeta {
 	if (page) {
 		const badge = page.badge ? ` (${page.badge})` : "";
 		return {
-			title: `${page.title}${badge} — ${page.description || "OOXML Reference"} | ooxml.dev`,
+			title: `${page.title}${badge} — OOXML Reference | ooxml.dev`,
 			description:
 				page.description || `${page.title} — interactive OOXML reference with live previews.`,
 			type: "article",

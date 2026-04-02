@@ -455,7 +455,7 @@ Each border element has:
 	"bidirectional-text": {
 		title: "Bidirectional Text (RTL)",
 		description:
-			"Right-to-left paragraph layout, run-level text direction, and how bidi interacts with alignment, indentation, and tab stops.",
+			"How RTL layout actually works in OOXML — paragraph direction, run-level bidi, and where alignment and tab stops break.",
 		badge: "w:bidi",
 		content: [
 			{
