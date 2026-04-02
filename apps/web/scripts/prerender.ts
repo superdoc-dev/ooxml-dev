@@ -180,7 +180,7 @@ function buildHead(path: string): string {
 			headline: seo.title.split(" | ")[0].split(" — ")[0],
 			description: seo.description,
 			url,
-			author: { "@type": "Organization", name: "SuperDoc", url: "https://superdoc.dev" },
+			author: { "@type": "Organization", name: "SuperDoc — DOCX editing and tooling", url: "https://superdoc.dev" },
 			publisher: { "@type": "Organization", name: "ooxml.dev" },
 			about: {
 				"@type": "Thing",

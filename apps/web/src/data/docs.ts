@@ -22,7 +22,7 @@ type ContentBlock =
 export const docs: Record<string, DocPage> = {
 	index: {
 		title: "Getting Started",
-		description: "Learn the basics of OOXML (Office Open XML) and how to use this reference.",
+		description: "OOXML structure, namespaces, and how to use this reference.",
 		content: [
 			{
 				type: "note",
@@ -33,7 +33,7 @@ export const docs: Record<string, DocPage> = {
 			{ type: "heading", level: 2, text: "What's Different Here" },
 			{
 				type: "paragraph",
-				text: "Unlike the official spec, this reference shows live previews, includes real implementation notes from building [SuperDoc](https://superdoc.dev/?utm_source=ooxml.dev&utm_medium=referral&utm_campaign=docs), and links to 100k+ real documents from [docx-corpus](https://docxcorp.us).",
+				text: "The official spec is 5,000+ pages and omits critical rendering details. This reference fills the gap: live previews, implementation notes from building [SuperDoc — DOCX editing and tooling](https://superdoc.dev/?utm_source=ooxml.dev&utm_medium=referral&utm_campaign=docs), and links to 1M+ real documents from [docx-corpus](https://docxcorp.us). Every note comes from shipping code, not reading the spec.",
 			},
 			{ type: "heading", level: 2, text: "OOXML Structure" },
 			{
@@ -764,7 +764,7 @@ w:rPr (run properties)
 		content: [
 			{
 				type: "paragraph",
-				text: "Lessons learned from building [SuperDoc](https://superdoc.dev/?utm_source=ooxml.dev&utm_medium=referral&utm_campaign=docs).",
+				text: "Lessons learned from building [SuperDoc — DOCX editing and tooling](https://superdoc.dev/?utm_source=ooxml.dev&utm_medium=referral&utm_campaign=docs).",
 			},
 			{ type: "heading", level: 2, text: "Word-Specific Issues" },
 			{

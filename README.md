@@ -8,42 +8,39 @@ The OOXML spec, explained by people who actually implemented it.
 
 ## What is this?
 
-An interactive reference for ECMA-376 (Office Open XML) with:
+An interactive reference for ECMA-376 (Office Open XML) built by the [SuperDoc — DOCX editing and tooling](https://superdoc.dev) team. Every page combines XML structure, live rendered previews, and implementation notes that tell you what the spec doesn't.
 
-- **Live previews** - See XML rendered in real-time with SuperDoc
-- **Implementation notes** - Real-world gotchas from building document processors
-- **Practical examples** - Working code, not just spec excerpts
+- **Live previews** — Edit XML and see it render in real-time. Every example is a working document.
+- **Implementation notes** — Where Word diverges from the spec, what will break your code, and what to do about it.
+- **Semantic spec search** — 18,000+ spec chunks searchable by meaning via MCP server.
 
 ## Why?
 
-The official ECMA-376 spec is 5,000+ pages. Most of it you'll never need. This reference focuses on what matters for building document tools, with insights from implementing [SuperDoc](https://superdoc.dev).
+The ECMA-376 spec is 5,000+ pages and it lies. Word's actual behavior diverges from the standard in ways you only discover by building against it. The knowledge to implement OOXML correctly is locked inside a handful of companies that have no incentive to share it.
 
-## MCP Server ![New](https://img.shields.io/badge/New-blue)
+We faced this at SuperDoc — building a document engine on native OOXML with no roadmap beyond an unreliable spec. We wrote down everything we learned and made it public. No one should have to reverse-engineer Word alone.
 
-**The world's first ECMA-376 MCP server.** Ask Claude about OOXML and get answers grounded in the actual spec.
+## MCP Server
+
+Search the ECMA-376 spec with AI. Ask questions in natural language, get answers grounded in the actual specification.
 
 ```bash
 claude mcp add --transport http ecma-spec https://api.ooxml.dev/mcp
 ```
 
-Example: *"How do I set paragraph spacing in WordprocessingML?"* - Claude searches 18,000+ spec chunks and returns the relevant sections.
+Works with Claude Code, Cursor, and any MCP-compatible client. Three tools: `search_ecma_spec` (semantic search), `get_section` (by ID), and `list_parts` (browse structure).
 
 ## Development
 
 ```bash
-# Install dependencies
-bun install
-
-# Start dev server
-bun dev
-
-# Build for production
-bun run build
+bun install    # Install dependencies
+bun dev        # Dev server at http://localhost:5173
+bun run build  # Production build
 ```
 
 ## Contributing
 
-Contributions welcome! Add implementation notes, fix examples, or improve docs.
+Contributions welcome. Add implementation notes, fix examples, or improve the reference.
 
 ## License
 
@@ -51,4 +48,4 @@ MIT
 
 ---
 
-Built by 🦋[SuperDoc](https://superdoc.dev)
+Built by 🦋 [SuperDoc — DOCX editing and tooling](https://superdoc.dev)

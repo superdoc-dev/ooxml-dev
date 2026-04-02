@@ -2,38 +2,41 @@
 
 > The OOXML spec, explained by people who actually implemented it.
 
-ooxml.dev is an interactive reference for ECMA-376 (Office Open XML), the standard behind .docx, .xlsx, and .pptx files. It features live previews, real-world implementation gotchas, and semantic spec search. Built by the SuperDoc team (https://www.superdoc.dev).
+ooxml.dev is the interactive reference for ECMA-376 (Office Open XML) — the standard behind .docx, .xlsx, and .pptx files. Built by SuperDoc — DOCX editing and tooling (https://superdoc.dev) from experience implementing a full OOXML document engine.
+
+Every page combines XML structure, live rendered previews, and implementation notes that tell you what the spec doesn't: where Word diverges from the standard, what will break your code, and what to do about it.
 
 ## Main Pages
 
 - [Home](https://ooxml.dev/): Overview and entry point
-- [Docs](https://ooxml.dev/docs/): Interactive OOXML reference documentation
-- [MCP Server](https://ooxml.dev/mcp/): Connect AI assistants to search 18,000+ ECMA-376 specification chunks via MCP
-- [Spec Explorer](https://ooxml.dev/spec/): Search and browse the ECMA-376 specification with semantic search
+- [Reference](https://ooxml.dev/docs/): Interactive OOXML reference with live previews and implementation notes
+- [Spec Explorer](https://ooxml.dev/spec/): Semantic search across the full ECMA-376 specification
+- [MCP Server](https://ooxml.dev/mcp/): Search 18,000+ spec chunks with AI via MCP
 
 ## Documentation
 
 ### Getting Started
-- [Introduction](https://ooxml.dev/docs/): Learn the basics of OOXML and how to use this reference
+- [Introduction](https://ooxml.dev/docs/): OOXML structure, namespaces, and how to use this reference
 
 ### WordprocessingML
 - [Paragraphs](https://ooxml.dev/docs/paragraphs/): Text structure and formatting — paragraphs, runs, and text elements (w:p)
 - [Paragraph Borders](https://ooxml.dev/docs/paragraph-borders/): Border properties, between-border groups, nil/none semantics (w:pBdr)
+- [Bidirectional Text](https://ooxml.dev/docs/bidirectional-text/): RTL layout, logical alignment, tab stop flipping, and bidi pitfalls
 - [Tables](https://ooxml.dev/docs/tables/): Table structure, properties, and implementation gotchas (w:tbl)
 - [Styles](https://ooxml.dev/docs/styles/): Style definitions, inheritance, and resolution (styles.xml)
 
 ### Guides
-- [Creating Documents](https://ooxml.dev/docs/creating-documents/): Step-by-step guide to creating a valid OOXML document from scratch
+- [Creating Documents](https://ooxml.dev/docs/creating-documents/): Building a valid OOXML document from scratch
 - [Common Gotchas](https://ooxml.dev/docs/common-gotchas/): Real-world implementation issues and how to solve them
 
 ## MCP Server
 
-The ooxml.dev MCP server provides AI assistants with access to the ECMA-376 specification. Available tools:
+Search the ECMA-376 spec with AI. 18,000+ spec chunks, searchable by meaning.
 
-- `search_ecma_spec`: Semantic search across 18,000+ specification chunks
-- `get_section`: Retrieve a specific section by ID (e.g., "17.3.2" for paragraph properties)
+- `search_ecma_spec`: Semantic search — ask questions in natural language
+- `get_section`: Retrieve a specific section by ID (e.g., "17.3.2")
 - `list_parts`: Browse the specification structure by part (1-4)
 
 ## About
 
-ooxml.dev is built and maintained by the SuperDoc team (https://www.superdoc.dev). SuperDoc is a document engine that implements the OOXML specification. The content on ooxml.dev comes from real-world experience building a full OOXML document engine.
+ooxml.dev is built by SuperDoc — DOCX editing and tooling (https://superdoc.dev). SuperDoc is a document engine that renders OOXML natively in the browser. The implementation notes on ooxml.dev come from building that engine against thousands of real-world documents.

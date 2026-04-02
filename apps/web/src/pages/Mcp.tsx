@@ -62,8 +62,8 @@ export function Mcp() {
 					</div>
 					<h1 className="text-3xl font-bold mb-4">Search the ECMA-376 spec with AI</h1>
 					<p className="text-[var(--color-text-secondary)] max-w-xl mx-auto">
-						Connect your MCP-compatible client to search 18,000+ specification chunks using natural
-						language queries.
+						18,000+ spec chunks, searchable by meaning. Ask questions in natural language, get the
+						relevant sections back.
 					</p>
 				</div>
 
@@ -233,7 +233,7 @@ export function Mcp() {
 							rel="noopener noreferrer"
 							className="text-[var(--color-accent)] hover:underline"
 						>
-							SuperDoc
+							SuperDoc — DOCX editing and tooling
 						</a>
 					</span>
 					<Link

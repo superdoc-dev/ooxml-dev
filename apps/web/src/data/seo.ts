@@ -8,27 +8,27 @@ export interface SeoMeta {
 
 const staticPages: Record<string, SeoMeta> = {
 	"/": {
-		title: "ooxml.dev — The Implementer's Guide to OOXML (ECMA-376)",
+		title: "ooxml.dev — The OOXML spec, explained by people who actually implemented it",
 		description:
-			"Interactive OOXML reference with live previews, implementation notes, and real-world gotchas. Built by the SuperDoc team.",
+			"Interactive ECMA-376 reference with live previews, implementation notes, and what the spec doesn't tell you. Built by SuperDoc — DOCX editing and tooling.",
 		type: "website",
 	},
 	"/mcp": {
 		title: "ECMA-376 MCP Server — Search the OOXML Spec with AI | ooxml.dev",
 		description:
-			"Connect your AI assistant to search 18,000+ OOXML specification chunks. Works with Claude Code, Cursor, and any MCP-compatible client.",
+			"Search 18,000+ OOXML spec chunks with natural language. Works with Claude Code, Cursor, and any MCP-compatible client.",
 		type: "website",
 	},
 	"/spec": {
-		title: "ECMA-376 Spec Explorer | ooxml.dev",
+		title: "ECMA-376 Spec Explorer — Search and Browse | ooxml.dev",
 		description:
-			"Search and browse the ECMA-376 Office Open XML specification with semantic search and PDF viewer.",
+			"Semantic search across the full ECMA-376 Office Open XML specification. Find sections by meaning, not just keywords.",
 		type: "website",
 	},
 	"/docs": {
 		title: "OOXML Reference — Getting Started | ooxml.dev",
 		description:
-			"Learn the basics of OOXML (Office Open XML) and how to use this interactive reference.",
+			"OOXML structure, namespaces, and how to use this reference. Live previews and implementation notes from building a real document engine.",
 		type: "article",
 	},
 };
