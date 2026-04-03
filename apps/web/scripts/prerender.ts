@@ -180,6 +180,9 @@ function buildHead(path: string): string {
 			headline: seo.title.split(" | ")[0].split(" — ")[0],
 			description: seo.description,
 			url,
+			image: `${SITE_URL}/og-image.png`,
+			datePublished: "2025-03-15",
+			dateModified: new Date().toISOString().split("T")[0],
 			author: {
 				"@type": "Organization",
 				name: "SuperDoc — DOCX editing and tooling",
@@ -338,4 +341,72 @@ const sitemap = generateSitemap(paths);
 writeFileSync(resolve(DIST, "sitemap.xml"), sitemap);
 console.log(`  ✓ /sitemap.xml`);
 
-console.log(`\nPre-rendered ${count} pages + 404 + sitemap.`);
+// Generate llms-full.txt — full documentation content for AI context windows
+function generateLlmsFullTxt(): string {
+	const lines: string[] = [
+		"# ooxml.dev — Full Documentation",
+		"",
+		"> The OOXML spec, explained by people who actually implemented it.",
+		"",
+		"This file contains the complete documentation content for AI context windows.",
+		"For a summary, see /llms.txt. For the interactive version, visit https://ooxml.dev",
+		"",
+	];
+
+	for (const [slug, page] of Object.entries(docs)) {
+		const url = slug === "index" ? "https://ooxml.dev/docs/" : `https://ooxml.dev/docs/${slug}/`;
+		const badge = page.badge ? ` (${page.badge})` : "";
+		lines.push(`---`);
+		lines.push("");
+		lines.push(`## ${page.title}${badge}`);
+		lines.push(`URL: ${url}`);
+		if (page.description) lines.push(`${page.description}`);
+		lines.push("");
+
+		for (const block of page.content) {
+			switch (block.type) {
+				case "heading":
+					lines.push(`${"#".repeat(block.level + 1)} ${block.text}`);
+					lines.push("");
+					break;
+				case "paragraph":
+					lines.push(block.text);
+					lines.push("");
+					break;
+				case "code":
+					lines.push(`\`\`\`${block.language || "xml"}`);
+					lines.push(block.code);
+					lines.push("```");
+					lines.push("");
+					break;
+				case "preview":
+					lines.push("```xml");
+					lines.push(block.xml);
+					lines.push("```");
+					lines.push("");
+					break;
+				case "note":
+					lines.push(`> **${block.noteType.toUpperCase()}${block.app ? ` (${block.app})` : ""}**: ${block.title}`);
+					lines.push(`> ${block.text}`);
+					lines.push("");
+					break;
+				case "table":
+					lines.push(`| ${block.headers.join(" | ")} |`);
+					lines.push(`| ${block.headers.map(() => "---").join(" | ")} |`);
+					for (const row of block.rows) {
+						lines.push(`| ${row.join(" | ")} |`);
+					}
+					lines.push("");
+					break;
+			}
+		}
+	}
+
+	return lines.join("\n");
+}
+
+const llmsFullTxt = generateLlmsFullTxt();
+writeFileSync(resolve(DIST, "llms-full.txt"), llmsFullTxt);
+console.log(`  ✓ /llms-full.txt`);
+
+console.log(`\nPre-rendered ${count} pages + 404 + sitemap + llms-full.txt.`);

@@ -2,6 +2,8 @@
 
 > The OOXML spec, explained by people who actually implemented it.
 
+> For full documentation content, see [/llms-full.txt](https://ooxml.dev/llms-full.txt)
+
 ooxml.dev is the interactive reference for ECMA-376 (Office Open XML) — the standard behind .docx, .xlsx, and .pptx files. Built by SuperDoc — DOCX editing and tooling (https://superdoc.dev) from experience implementing a full OOXML document engine.
 
 Every page combines XML structure, live rendered previews, and implementation notes that tell you what the spec doesn't: where Word diverges from the standard, what will break your code, and what to do about it.

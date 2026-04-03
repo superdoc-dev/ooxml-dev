@@ -125,7 +125,7 @@ function NavLink({
 	const className = clsx(
 		"rounded px-3 py-1.5 text-sm transition",
 		disabled
-			? "cursor-not-allowed text-[var(--color-text-muted)] opacity-50"
+			? "cursor-not-allowed text-[var(--color-text-muted)]"
 			: active
 				? "font-medium text-[var(--color-accent)] bg-[var(--color-accent)]/10"
 				: "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]",
