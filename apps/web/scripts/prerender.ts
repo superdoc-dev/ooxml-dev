@@ -386,7 +386,9 @@ function generateLlmsFullTxt(): string {
 					lines.push("");
 					break;
 				case "note":
-					lines.push(`> **${block.noteType.toUpperCase()}${block.app ? ` (${block.app})` : ""}**: ${block.title}`);
+					lines.push(
+						`> **${block.noteType.toUpperCase()}${block.app ? ` (${block.app})` : ""}**: ${block.title}`,
+					);
 					lines.push(`> ${block.text}`);
 					lines.push("");
 					break;

@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
-/* ooxml.dev theme - Orange */
+/* ooxml.dev theme - Burnt Orange */
 :root {
-	/* Orange accent (AA-accessible on all theme backgrounds) */
-	--color-accent: #b94a0a;
-	--color-accent-hover: #9a3e08;
+	/* Burnt Orange accent (AA-accessible on all theme backgrounds) */
+	--color-accent: #c2410c;
+	--color-accent-hover: #9a3412;
 	--color-accent-light: #fff7ed;
 
 	/* Backgrounds */
