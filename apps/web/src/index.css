@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
-/* ooxml.dev theme - Coral */
+/* ooxml.dev theme - Orange */
 :root {
-	/* Coral accent (AA-accessible on all theme backgrounds) */
-	--color-accent: #c1463a;
-	--color-accent-hover: #a33b31;
-	--color-accent-light: #fef2f0;
+	/* Orange accent (AA-accessible on all theme backgrounds) */
+	--color-accent: #b94a0a;
+	--color-accent-hover: #9a3e08;
+	--color-accent-light: #fff7ed;
 
 	/* Backgrounds */
 	--color-bg-primary: #ffffff;
@@ -63,8 +63,8 @@ body {
 }
 
 .note-info {
-	background-color: #fef2f0;
-	border-color: #fecaca;
+	background-color: #fff7ed;
+	border-color: #fed7aa;
 }
 
 .note-tip {
