@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
-/* ooxml.dev theme - Blue */
+/* ooxml.dev theme - Coral */
 :root {
-	/* SuperDoc Blue accent */
-	--color-accent: #1355ff;
-	--color-accent-hover: #0f44cc;
-	--color-accent-light: #eff4ff;
+	/* Coral accent (AA-accessible on all theme backgrounds) */
+	--color-accent: #c1463a;
+	--color-accent-hover: #a33b31;
+	--color-accent-light: #fef2f0;
 
 	/* Backgrounds */
 	--color-bg-primary: #ffffff;
@@ -63,8 +63,8 @@ body {
 }
 
 .note-info {
-	background-color: #eff4ff;
-	border-color: #bfdbfe;
+	background-color: #fef2f0;
+	border-color: #fecaca;
 }
 
 .note-tip {

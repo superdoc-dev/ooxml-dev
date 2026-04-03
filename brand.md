@@ -206,10 +206,10 @@ _Use on homepage hero, social bios, link previews._
 
 ### Colors
 
-ooxml.dev inherits SuperDoc's color system as a sub-brand, with adjustments for a documentation-first context.
+ooxml.dev uses its own coral accent, distinct from SuperDoc's blue, to establish an independent identity as a reference site.
 
-**Primary — SuperDoc Blue**
-`#1355FF` — Links, interactive elements, active states. Connects ooxml.dev visually to SuperDoc.
+**Primary — Coral**
+`#C1463A` — Links, buttons, interactive elements, active states. An accessible shade of the original coral (4.99:1 on white, 4.58:1 on tertiary backgrounds).
 
 **Accent — Spec Gold**
 `#F59E0B` (amber-500) — Implementation notes, callout badges, warning states. Signals "attention — this is the insight you came for."
@@ -219,7 +219,7 @@ ooxml.dev inherits SuperDoc's color system as a sub-brand, with adjustments for 
 |---|---|---|
 | Critical note | `#ED4337` | Critical implementation notes — things that break |
 | Warning note | `#F59E0B` | Non-obvious behavior, surprising gotchas |
-| Info note | `#1355FF` | Context and background |
+| Info note | `#C1463A` | Context and background |
 | Tip note | `#00853D` | Helpful shortcuts and techniques |
 | Text primary | `#212121` | Headings, body copy |
 | Text secondary | `#666666` | Supporting text, metadata |
