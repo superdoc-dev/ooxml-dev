@@ -81,21 +81,21 @@ function docPageToHtml(page: DocPage): string {
 const NAV_SECTIONS = [
 	{
 		title: "Getting Started",
-		items: [{ to: "/docs", label: "Introduction" }],
+		items: [{ to: "/docs/", label: "Introduction" }],
 	},
 	{
 		title: "WordprocessingML",
 		items: [
-			{ to: "/docs/paragraphs", label: "Paragraphs" },
-			{ to: "/docs/paragraph-borders", label: "Paragraph Borders" },
-			{ to: "/docs/tables", label: "Tables" },
+			{ to: "/docs/paragraphs/", label: "Paragraphs" },
+			{ to: "/docs/paragraph-borders/", label: "Paragraph Borders" },
+			{ to: "/docs/tables/", label: "Tables" },
 		],
 	},
 	{
 		title: "Guides",
 		items: [
-			{ to: "/docs/creating-documents", label: "Creating Documents" },
-			{ to: "/docs/common-gotchas", label: "Common Gotchas" },
+			{ to: "/docs/creating-documents/", label: "Creating Documents" },
+			{ to: "/docs/common-gotchas/", label: "Common Gotchas" },
 		],
 	},
 ];
@@ -116,8 +116,8 @@ function homePageHtml(): string {
 	return `<main>
 <h1>ooxml.dev</h1>
 <p>The OOXML spec, explained by people who actually implemented it.</p>
-<p>Interactive examples, real-world gotchas, live previews, and semantic spec search.</p>
-<a href="/docs">Browse Reference</a>
+<p>Live previews, implementation notes, and what the spec doesn't tell you.</p>
+<a href="/docs/">Browse Reference</a>
 ${navHtml()}
 </main>`;
 }
@@ -299,7 +299,7 @@ function render404Page(): string {
 <p style="margin-bottom:2rem;opacity:0.7">The page you're looking for doesn't exist or has been moved.</p>
 <a href="/" style="color:inherit;text-decoration:underline">Go to homepage</a>
 <span style="margin:0 0.5rem;opacity:0.5">·</span>
-<a href="/docs" style="color:inherit;text-decoration:underline">Browse docs</a>
+<a href="/docs/" style="color:inherit;text-decoration:underline">Browse docs</a>
 </main>`;
 
 	let html = template;
