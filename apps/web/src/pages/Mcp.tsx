@@ -237,7 +237,7 @@ export function Mcp() {
 						</a>
 					</span>
 					<Link
-						to="/docs"
+						to="/docs/"
 						className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
 					>
 						Back to Docs →

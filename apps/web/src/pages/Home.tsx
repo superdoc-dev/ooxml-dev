@@ -22,7 +22,7 @@ export function Home() {
 				</p>
 				<div className="flex justify-center gap-4 mb-6">
 					<Link
-						to="/docs"
+						to="/docs/"
 						className="rounded-lg bg-[var(--color-accent)] px-5 py-2.5 font-medium text-white transition hover:bg-[var(--color-accent-hover)] sm:px-6 sm:py-3"
 					>
 						Browse Reference
@@ -38,7 +38,7 @@ export function Home() {
 						Bidirectional Text — RTL layout, logical alignment, tab stop flipping, and bidi pitfalls
 					</span>
 					<Link
-						to="/docs/bidirectional-text"
+						to="/docs/bidirectional-text/"
 						className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-medium text-xs"
 					>
 						Read it →

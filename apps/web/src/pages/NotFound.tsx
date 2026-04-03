@@ -23,7 +23,7 @@ export function NotFound() {
 						Go to Homepage
 					</Link>
 					<Link
-						to="/docs"
+						to="/docs/"
 						className="rounded-lg border border-[var(--color-border)] px-5 py-2.5 font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-bg-secondary)]"
 					>
 						Browse Docs

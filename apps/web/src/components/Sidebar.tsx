@@ -5,32 +5,32 @@ import { Link, useLocation } from "react-router-dom";
 const NAV_SECTIONS = [
 	{
 		title: "Getting Started",
-		items: [{ to: "/docs", label: "Introduction", path: "index" }],
+		items: [{ to: "/docs/", label: "Introduction", path: "index" }],
 	},
 	{
 		title: "WordprocessingML",
 		items: [
-			{ to: "/docs/paragraphs", label: "Paragraphs", path: "paragraphs" },
+			{ to: "/docs/paragraphs/", label: "Paragraphs", path: "paragraphs" },
 			{
-				to: "/docs/paragraph-borders",
+				to: "/docs/paragraph-borders/",
 				label: "Paragraph Borders",
 				path: "paragraph-borders",
 			},
 			{
-				to: "/docs/bidirectional-text",
+				to: "/docs/bidirectional-text/",
 				label: "Bidirectional Text (RTL)",
 				path: "bidirectional-text",
 				isNew: true,
 			},
-			{ to: "/docs/tables", label: "Tables", path: "tables" },
-			{ to: "/docs/styles", label: "Styles", path: "styles", disabled: true },
+			{ to: "/docs/tables/", label: "Tables", path: "tables" },
+			{ to: "/docs/styles/", label: "Styles", path: "styles", disabled: true },
 		],
 	},
 	{
 		title: "Guides",
 		items: [
-			{ to: "/docs/creating-documents", label: "Creating Documents", path: "creating-documents" },
-			{ to: "/docs/common-gotchas", label: "Common Gotchas", path: "common-gotchas" },
+			{ to: "/docs/creating-documents/", label: "Creating Documents", path: "creating-documents" },
+			{ to: "/docs/common-gotchas/", label: "Common Gotchas", path: "common-gotchas" },
 		],
 	},
 ];

@@ -31,7 +31,7 @@ export function Navbar({ sticky = false, maxWidth = false, onSearchClick }: Navb
 
 				{/* Desktop navigation */}
 				<nav className="hidden items-center gap-4 sm:flex">
-					<NavLink to="/docs" active={isDocsActive}>
+					<NavLink to="/docs/" active={isDocsActive}>
 						Reference
 					</NavLink>
 					<div className="flex items-center gap-1">
@@ -81,7 +81,7 @@ export function Navbar({ sticky = false, maxWidth = false, onSearchClick }: Navb
 			{/* Mobile menu */}
 			{mobileMenuOpen && (
 				<nav className="mt-3 flex flex-col gap-1 border-t border-[var(--color-border)] pt-3 sm:hidden">
-					<NavLink to="/docs" active={isDocsActive} onClick={() => setMobileMenuOpen(false)}>
+					<NavLink to="/docs/" active={isDocsActive} onClick={() => setMobileMenuOpen(false)}>
 						Reference
 					</NavLink>
 					<div className="flex items-center gap-1">
