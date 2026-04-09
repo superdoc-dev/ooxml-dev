@@ -6,9 +6,11 @@ on:
     branches: [main]
     paths:
       - "apps/web/**"
+      - "apps/mcp-server/**"
+      - "packages/shared/**"
 
 jobs:
-  deploy:
+  deploy-web:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,3 +32,23 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy apps/web/dist --project-name=ooxml-dev
+
+  deploy-mcp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install
+
+      - name: Deploy MCP Server
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/mcp-server
