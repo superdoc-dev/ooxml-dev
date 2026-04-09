@@ -7,5 +7,8 @@ compatibility_flags = ["nodejs_compat"]
 # wrangler secret put DATABASE_URL
 # wrangler secret put VOYAGE_API_KEY
 
+[observability]
+enabled = true
+
 [vars]
 # Non-secret environment variables can go here

@@ -67,6 +67,18 @@ export default {
 		const url = new URL(request.url);
 		const corsHeaders = getCorsHeaders(request, env);
 
+		// Log request origin for observability
+		console.log("incoming request", {
+			method: request.method,
+			path: url.pathname,
+			origin: request.headers.get("Origin") || "none",
+			referer: request.headers.get("Referer") || "none",
+			userAgent: request.headers.get("User-Agent") || "none",
+			ip: request.headers.get("CF-Connecting-IP") || "unknown",
+			country: request.headers.get("CF-IPCountry") || "unknown",
+			host: request.headers.get("Host") || "unknown",
+		});
+
 		// Handle CORS preflight
 		if (request.method === "OPTIONS") {
 			return new Response(null, {

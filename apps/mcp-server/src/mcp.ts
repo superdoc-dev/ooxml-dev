@@ -149,6 +149,8 @@ async function handleToolsCall(
 ): Promise<JsonRpcResponse> {
 	const { name, arguments: args } = params as ToolCallParams;
 
+	console.log("mcp tool call", { tool: name, args });
+
 	if (!name) {
 		return {
 			jsonrpc: "2.0",
