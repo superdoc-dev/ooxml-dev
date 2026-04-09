@@ -63,7 +63,7 @@ function addCorsHeaders(response: Response, corsHeaders: Record<string, string>)
 }
 
 export default {
-	async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const url = new URL(request.url);
 		const corsHeaders = getCorsHeaders(request, env);
 
@@ -104,8 +104,50 @@ export default {
 				const response = await handleMcpRequest(request, env);
 				return addCorsHeaders(response, corsHeaders);
 			}
-			// GET returns server info for debugging
-			return addCorsHeaders(handleMcpInfo(), corsHeaders);
+
+			if (request.method === "GET") {
+				const accept = request.headers.get("Accept") || "";
+
+				// MCP Streamable HTTP: return SSE stream for clients expecting event-stream
+				if (accept.includes("text/event-stream")) {
+					const { readable, writable } = new TransformStream();
+					const writer = writable.getWriter();
+					const encoder = new TextEncoder();
+
+					ctx.waitUntil(
+						(async () => {
+							try {
+								// Initial keepalive
+								await writer.write(encoder.encode(":ok\n\n"));
+								// Send keepalive every 30s to hold connection open
+								while (true) {
+									await new Promise((resolve) => setTimeout(resolve, 30000));
+									await writer.write(encoder.encode(":keepalive\n\n"));
+								}
+							} catch {
+								// Client disconnected — stream closed
+							}
+						})(),
+					);
+
+					request.signal.addEventListener("abort", () => {
+						writer.close().catch(() => {});
+					});
+
+					return addCorsHeaders(
+						new Response(readable, {
+							headers: {
+								"Content-Type": "text/event-stream",
+								"Cache-Control": "no-cache",
+							},
+						}),
+						corsHeaders,
+					);
+				}
+
+				// Non-SSE GET returns server info for debugging
+				return addCorsHeaders(handleMcpInfo(), corsHeaders);
+			}
 		}
 
 		// REST API endpoints
