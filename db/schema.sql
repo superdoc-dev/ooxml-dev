@@ -64,11 +64,15 @@ CREATE TABLE xsd_namespaces (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- type_ref holds the Clark-style {namespace}localName for elements and attributes
+-- that declare a @type. NULL for complexType/simpleType/group/attributeGroup.
+-- Phase 4 lookups follow type_ref to resolve element -> type when reading children.
 CREATE TABLE xsd_symbols (
   id SERIAL PRIMARY KEY,
   vocabulary_id TEXT NOT NULL,
   local_name TEXT NOT NULL,
   kind TEXT NOT NULL,
+  type_ref TEXT,
   payload JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (vocabulary_id, local_name, kind)
@@ -121,13 +125,20 @@ CREATE TABLE xsd_attr_edges (
   order_index INT DEFAULT 0
 );
 
+-- compositor_id is the enclosing compositor when a <xsd:group ref> appears inside
+-- a sequence/choice/all (NULL for refs at the type's top level or for
+-- attributeGroup refs which don't live in a compositor).
+-- min/max_occurs capture the ref site's own cardinality.
 CREATE TABLE xsd_group_edges (
   id SERIAL PRIMARY KEY,
   parent_symbol_id INT NOT NULL REFERENCES xsd_symbols(id) ON DELETE CASCADE,
+  compositor_id INT REFERENCES xsd_compositors(id) ON DELETE CASCADE,
   group_symbol_id INT NOT NULL REFERENCES xsd_symbols(id),
   profile_id INT NOT NULL REFERENCES xsd_profiles(id) ON DELETE CASCADE,
   ref_kind TEXT NOT NULL CHECK (ref_kind IN ('group', 'attributeGroup')),
   resolved BOOLEAN DEFAULT FALSE,
+  min_occurs INT DEFAULT 1,
+  max_occurs INT,
   order_index INT DEFAULT 0
 );
 

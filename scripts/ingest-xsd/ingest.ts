@@ -118,11 +118,16 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 			for (const decl of decls) {
 				const key = symbolKey(decl.vocabularyId, decl.localName, decl.kind);
 				if (symbolIds.has(key)) continue;
+
+				// Capture @type for elements and attributes; resolved Clark-style.
+				const typeRef = resolveDeclTypeRef(decl, parseResult);
+
 				const { id, inserted } = await upsertSymbol(
 					sql,
 					decl.vocabularyId,
 					decl.localName,
 					decl.kind,
+					typeRef,
 				);
 				symbolIds.set(key, id);
 				if (inserted) stats.symbolsInserted++;
@@ -229,10 +234,13 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 				const ctx: WalkCtx = {
 					sql,
 					profileId,
+					sourceId,
 					ownerSymbolId,
 					ownerDecl: decl,
 					prefixMap,
 					symbolIds,
+					namespaceIds,
+					parseResult,
 					stats,
 				};
 
@@ -245,7 +253,7 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 							await walkCompositor(child, tag, null, topOrder, ctx);
 							topOrder++;
 						} else if (tag === "group") {
-							await handleGroupRef(child, topOrder, ctx);
+							await handleGroupRef(child, null, topOrder, ctx);
 							topOrder++;
 						}
 					}
@@ -283,6 +291,7 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 									prefixMap,
 									decl.namespace,
 									symbolIds,
+									parseResult,
 									order,
 									stats,
 								);
@@ -296,18 +305,27 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 									continue;
 								}
 								const groupSymbolId = symbolIds.get(
-									symbolKey(resolved.qname.vocabularyId, resolved.qname.localName, "attributeGroup"),
+									symbolKey(
+										resolved.qname.vocabularyId,
+										resolved.qname.localName,
+										"attributeGroup",
+									),
 								);
 								if (groupSymbolId == null) {
 									stats.attrGroupRefsUnresolved++;
 									continue;
 								}
+								// attributeGroup refs don't live inside content compositors;
+								// compositor_id stays null and min/max default to 1.
 								await insertGroupEdge(
 									sql,
 									ownerSymbolId,
+									null,
 									groupSymbolId,
 									profileId,
 									"attributeGroup",
+									1,
+									1,
 									order,
 								);
 								stats.attrGroupRefsInserted++;
@@ -333,11 +351,28 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 interface WalkCtx {
 	sql: Sql;
 	profileId: number;
+	sourceId: number;
 	ownerSymbolId: number;
 	ownerDecl: Declaration;
 	prefixMap: Map<string, string>;
 	symbolIds: Map<string, number>;
+	namespaceIds: Map<string, number>;
+	parseResult: ParsedSchemaSet;
 	stats: IngestStats;
+}
+
+/**
+ * Resolve a declaration's @type qname (for top-level element/attribute decls)
+ * to Clark-style {namespace}localName, or null if the declaration has no @type.
+ */
+function resolveDeclTypeRef(decl: Declaration, parseResult: ParsedSchemaSet): string | null {
+	if (decl.kind !== "element" && decl.kind !== "attribute") return null;
+	const a = nodeAttrs(decl.node);
+	if (!a.type) return null;
+	const prefixMap = parseResult.namespaceByPrefix.get(decl.documentPath);
+	if (!prefixMap) return a.type;
+	const r = resolveQNameAttr(a.type, prefixMap, decl.namespace);
+	return r.resolved ? `{${r.qname.namespace}}${r.qname.localName}` : a.type;
 }
 
 /**
@@ -401,7 +436,7 @@ async function walkCompositor(
 			await walkCompositor(child, tag, compositorId, childOrder, ctx);
 			childOrder++;
 		} else if (tag === "group") {
-			await handleGroupRef(child, childOrder, ctx, compositorId);
+			await handleGroupRef(child, compositorId, childOrder, ctx);
 			childOrder++;
 		}
 		// xsd:any: skipped for now.
@@ -432,10 +467,22 @@ async function handleElement(
 		}
 		childSymbolId = id;
 	} else if (a.name) {
+		// Resolve @type so ooxml_lookup_element / ooxml_children can follow it.
+		let typeRef: string | null = null;
+		if (a.type) {
+			const r = resolveQNameAttr(a.type, ctx.prefixMap, ctx.ownerDecl.namespace);
+			typeRef = r.resolved ? `{${r.qname.namespace}}${r.qname.localName}` : a.type;
+		}
 		const key = symbolKey(ctx.ownerDecl.vocabularyId, a.name, "element");
 		let id = ctx.symbolIds.get(key);
 		if (id == null) {
-			const res = await upsertSymbol(ctx.sql, ctx.ownerDecl.vocabularyId, a.name, "element");
+			const res = await upsertSymbol(
+				ctx.sql,
+				ctx.ownerDecl.vocabularyId,
+				a.name,
+				"element",
+				typeRef,
+			);
 			ctx.symbolIds.set(key, res.id);
 			if (res.inserted) {
 				ctx.stats.symbolsInserted++;
@@ -443,7 +490,26 @@ async function handleElement(
 			} else {
 				ctx.stats.symbolsExisting++;
 			}
+			// Local elements need profile membership too, otherwise
+			// ooxml_lookup_element won't find them in the transitional profile.
+			const nsId = ctx.namespaceIds.get(ctx.ownerDecl.namespace);
+			if (nsId != null) {
+				const linked = await linkSymbolToProfile(
+					ctx.sql,
+					res.id,
+					ctx.profileId,
+					nsId,
+					ctx.sourceId,
+				);
+				if (linked) ctx.stats.profileMembershipsInserted++;
+			}
 			id = res.id;
+		} else if (typeRef) {
+			// Existing symbol; ensure type_ref is set if we have one.
+			await ctx.sql`
+				UPDATE xsd_symbols SET type_ref = ${typeRef}
+				WHERE id = ${id} AND type_ref IS NULL
+			`;
 		}
 		childSymbolId = id;
 	}
@@ -465,11 +531,10 @@ async function handleElement(
 
 async function handleGroupRef(
 	node: PreserveOrderNode,
+	compositorId: number | null,
 	orderIndex: number,
 	ctx: WalkCtx,
-	_compositorId: number | null = null,
 ): Promise<void> {
-	void _compositorId; // group_edges aren't compositor-scoped in our schema; refs hang off the parent symbol.
 	const a = nodeAttrs(node);
 	if (!a.ref) return;
 	const resolved = resolveQNameAttr(a.ref, ctx.prefixMap, ctx.ownerDecl.namespace);
@@ -487,9 +552,12 @@ async function handleGroupRef(
 	await insertGroupEdge(
 		ctx.sql,
 		ctx.ownerSymbolId,
+		compositorId,
 		groupSymbolId,
 		ctx.profileId,
 		"group",
+		parseMinOccurs(a.minOccurs),
+		parseMaxOccurs(a.maxOccurs),
 		orderIndex,
 	);
 	ctx.stats.groupRefsInserted++;
@@ -542,11 +610,13 @@ async function upsertSymbol(
 	vocabularyId: string,
 	localName: string,
 	kind: string,
+	typeRef: string | null = null,
 ): Promise<{ id: number; inserted: boolean }> {
 	const [row] = await sql`
-		INSERT INTO xsd_symbols (vocabulary_id, local_name, kind)
-		VALUES (${vocabularyId}, ${localName}, ${kind})
-		ON CONFLICT (vocabulary_id, local_name, kind) DO UPDATE SET kind = EXCLUDED.kind
+		INSERT INTO xsd_symbols (vocabulary_id, local_name, kind, type_ref)
+		VALUES (${vocabularyId}, ${localName}, ${kind}, ${typeRef})
+		ON CONFLICT (vocabulary_id, local_name, kind) DO UPDATE
+			SET type_ref = COALESCE(EXCLUDED.type_ref, xsd_symbols.type_ref)
 		RETURNING id, (xmax = 0) AS inserted
 	`;
 	return { id: row.id, inserted: row.inserted };
@@ -625,16 +695,19 @@ async function insertChildEdge(
 async function insertGroupEdge(
 	sql: Sql,
 	parentSymbolId: number,
+	compositorId: number | null,
 	groupSymbolId: number,
 	profileId: number,
 	refKind: "group" | "attributeGroup",
+	minOccurs: number,
+	maxOccurs: number | null,
 	orderIndex: number,
 ): Promise<void> {
 	await sql`
 		INSERT INTO xsd_group_edges
-			(parent_symbol_id, group_symbol_id, profile_id, ref_kind, order_index)
+			(parent_symbol_id, compositor_id, group_symbol_id, profile_id, ref_kind, min_occurs, max_occurs, order_index)
 		VALUES
-			(${parentSymbolId}, ${groupSymbolId}, ${profileId}, ${refKind}, ${orderIndex})
+			(${parentSymbolId}, ${compositorId}, ${groupSymbolId}, ${profileId}, ${refKind}, ${minOccurs}, ${maxOccurs}, ${orderIndex})
 	`;
 }
 
@@ -721,6 +794,7 @@ async function handleAttribute(
 	prefixMap: Map<string, string>,
 	defaultNamespace: string,
 	symbolIds: Map<string, number>,
+	parseResult: ParsedSchemaSet,
 	orderIndex: number,
 	stats: IngestStats,
 ): Promise<void> {
@@ -728,6 +802,8 @@ async function handleAttribute(
 	let localName: string | null = null;
 	let attrSymbolId: number | null = null;
 	let typeRef: string | null = null;
+	let defaultValue: string | null = a.default ?? null;
+	let fixedValue: string | null = a.fixed ?? null;
 
 	if (a.ref) {
 		const resolved = resolveQNameAttr(a.ref, prefixMap, defaultNamespace);
@@ -740,6 +816,27 @@ async function handleAttribute(
 			symbolKey(resolved.qname.vocabularyId, resolved.qname.localName, "attribute"),
 		);
 		if (id != null) attrSymbolId = id;
+
+		// Carry type/default/fixed from the top-level <xsd:attribute name="..."> declaration.
+		// XSD allows these only on the declaration, not the ref site, so look them up there.
+		const declKey = `{${resolved.qname.namespace}}attribute:${resolved.qname.localName}`;
+		const topDecl = parseResult.declarationsByQName.get(declKey)?.[0];
+		if (topDecl) {
+			const declAttrs = nodeAttrs(topDecl.node);
+			if (declAttrs.type) {
+				const declPrefixMap = parseResult.namespaceByPrefix.get(topDecl.documentPath);
+				if (declPrefixMap) {
+					const t = resolveQNameAttr(declAttrs.type, declPrefixMap, topDecl.namespace);
+					typeRef = t.resolved
+						? `{${t.qname.namespace}}${t.qname.localName}`
+						: declAttrs.type;
+				} else {
+					typeRef = declAttrs.type;
+				}
+			}
+			if (defaultValue == null) defaultValue = declAttrs.default ?? null;
+			if (fixedValue == null) fixedValue = declAttrs.fixed ?? null;
+		}
 	} else if (a.name) {
 		localName = a.name;
 		if (a.type) {
@@ -756,9 +853,7 @@ async function handleAttribute(
 
 	const rawUse = a.use;
 	const attrUse: "required" | "optional" | "prohibited" =
-		rawUse === "required" || rawUse === "optional" || rawUse === "prohibited"
-			? rawUse
-			: "optional";
+		rawUse === "required" || rawUse === "optional" || rawUse === "prohibited" ? rawUse : "optional";
 
 	await insertAttrEdge(
 		sql,
@@ -767,8 +862,8 @@ async function handleAttribute(
 		localName,
 		profileId,
 		attrUse,
-		a.default ?? null,
-		a.fixed ?? null,
+		defaultValue,
+		fixedValue,
 		typeRef,
 		orderIndex,
 	);

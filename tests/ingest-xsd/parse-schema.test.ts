@@ -85,14 +85,14 @@ test("declarationsByQName indexes all top-level declarations across documents", 
 	const set = await parseSchemaSet({ schemaDir: FIXTURES_DIR, entrypoints: ["main.xsd"] });
 
 	const counts = countByKind(set.declarationsByQName);
-	// main.xsd: 1 element, 6 complexType, 1 simpleType, 1 group, 1 attributeGroup
-	// shared.xsd: 2 simpleType
+	// main.xsd: 1 element, 7 complexType, 1 simpleType, 1 group, 1 attributeGroup
+	// shared.xsd: 2 simpleType, 1 attribute
 	expect(counts.element).toBe(1);
-	expect(counts.complexType).toBe(6);
+	expect(counts.complexType).toBe(7);
 	expect(counts.simpleType).toBe(3);
 	expect(counts.group).toBe(1);
 	expect(counts.attributeGroup).toBe(1);
-	expect(counts.attribute).toBe(0);
+	expect(counts.attribute).toBe(1);
 
 	// Specific decl lookup by canonical key.
 	const ctPara = set.declarationsByQName.get(declarationQNameKey(WML_NS, "complexType", "CT_Para"));

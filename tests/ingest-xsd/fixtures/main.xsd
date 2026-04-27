@@ -52,5 +52,8 @@
     <xsd:attributeGroup ref="AG_TableProps"/>
     <xsd:attribute name="caption" type="xsd:string" use="required"/>
   </xsd:complexType>
+  <xsd:complexType name="CT_RefTest">
+    <xsd:attribute ref="s:space" use="required"/>
+  </xsd:complexType>
   <xsd:element name="document" type="CT_Empty"/>
 </xsd:schema>

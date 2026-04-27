@@ -323,11 +323,12 @@ test("ingest writes attributes, attributeGroup refs, and enum values", async () 
 	});
 
 	// Fixture attributes:
-	//   CT_Para/bold       (optional, type s:ST_OnOff)
-	//   CT_Extended/extra  (optional, type xsd:string, under complexContent/extension)
-	//   AG_TableProps/cols (optional, type xsd:int)
+	//   CT_Para/bold        (optional, type s:ST_OnOff)
+	//   CT_Extended/extra   (optional, type xsd:string, under complexContent/extension)
+	//   AG_TableProps/cols  (optional, type xsd:int)
 	//   CT_TableUser/caption (required, type xsd:string)
-	expect(stats.attrEdgesInserted).toBe(4);
+	//   CT_RefTest/space    (required, ref="s:space"; type/default copied from decl)
+	expect(stats.attrEdgesInserted).toBe(5);
 	expect(stats.attrEdgesUnresolved).toBe(0);
 
 	// Fixture attributeGroup refs:
@@ -389,6 +390,73 @@ test("ingest writes attributes, attributeGroup refs, and enum values", async () 
 		ORDER BY e.order_index
 	`;
 	expect(enumValues.map((r: { value: string }) => r.value)).toEqual(["left", "center", "right"]);
+});
+
+test("ingest preserves element/attribute @type, local-element profile membership, and group-ref compositor context", async () => {
+	await ingestSchemaSet({
+		schemaDir: FIXTURES_DIR,
+		entrypoints: ["main.xsd"],
+		profileName: "transitional",
+		sourceName: "ecma-376-transitional",
+		db,
+	});
+
+	// Top-level element: <xsd:element name="document" type="CT_Empty"/>
+	// type_ref must point at CT_Empty in wml-main.
+	const [docSym] = await db.sql`
+		SELECT type_ref FROM xsd_symbols
+		WHERE local_name = 'document' AND kind = 'element' AND vocabulary_id = 'wml-main'
+	`;
+	expect(docSym?.type_ref).toBe(
+		"{http://schemas.openxmlformats.org/wordprocessingml/2006/main}CT_Empty",
+	);
+
+	// Local element: <xsd:element name="text" type="xsd:string"/> inside CT_Para.
+	// Should have type_ref AND profile membership so ooxml_lookup_element finds it.
+	const [textSym] = await db.sql`
+		SELECT s.id, s.type_ref FROM xsd_symbols s
+		WHERE s.local_name = 'text' AND s.kind = 'element' AND s.vocabulary_id = 'wml-main'
+	`;
+	expect(textSym?.type_ref).toBe("{http://www.w3.org/2001/XMLSchema}string");
+
+	const [textMembership] = await db.sql`
+		SELECT sp.id FROM xsd_symbol_profiles sp
+		JOIN xsd_profiles p ON p.id = sp.profile_id
+		WHERE sp.symbol_id = ${textSym.id} AND p.name = 'transitional'
+	`;
+	expect(textMembership?.id).toBeDefined();
+
+	// Group ref inside a nested choice (CT_Body's choice contains <xsd:group ref="EG_PContent"/>).
+	// compositor_id must point at the choice, not be null. Min/max occurs default to 1
+	// since the ref itself has no minOccurs/maxOccurs in our fixture.
+	const [groupRef] = await db.sql`
+		SELECT ge.compositor_id, ge.min_occurs, ge.max_occurs, c.kind AS compositor_kind,
+		       c.parent_compositor_id IS NOT NULL AS is_nested
+		FROM xsd_group_edges ge
+		JOIN xsd_compositors c ON c.id = ge.compositor_id
+		JOIN xsd_symbols g ON g.id = ge.group_symbol_id
+		JOIN xsd_symbols parent ON parent.id = ge.parent_symbol_id
+		WHERE parent.local_name = 'CT_Body' AND g.local_name = 'EG_PContent'
+	`;
+	expect(groupRef?.compositor_id).toBeDefined();
+	expect(groupRef?.compositor_kind).toBe("choice");
+	expect(groupRef?.is_nested).toBe(true);
+
+	// Attribute ref: <xsd:attribute ref="s:space" use="required"/> inside CT_RefTest.
+	// type_ref and default_value must be recovered from the top-level <xsd:attribute name="space" type="xsd:string" default="preserve"/>.
+	// attr_use must come from the ref site (required, not the declaration's optional default).
+	const [refAttr] = await db.sql`
+		SELECT a.local_name, a.attr_use, a.default_value, a.type_ref,
+		       a.attr_symbol_id IS NOT NULL AS has_attr_sym
+		FROM xsd_attr_edges a
+		JOIN xsd_symbols s ON s.id = a.symbol_id
+		WHERE s.local_name = 'CT_RefTest' AND s.kind = 'complexType'
+	`;
+	expect(refAttr?.local_name).toBe("space");
+	expect(refAttr?.attr_use).toBe("required");
+	expect(refAttr?.default_value).toBe("preserve");
+	expect(refAttr?.type_ref).toBe("{http://www.w3.org/2001/XMLSchema}string");
+	expect(refAttr?.has_attr_sym).toBe(true);
 });
 
 test.skipIf(!realCacheReady)(
