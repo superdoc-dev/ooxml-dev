@@ -21,6 +21,7 @@
     "db:shell": "docker compose exec db psql -U postgres -d ecma_spec",
     "db:migrate": "bun scripts/db-migrate.ts",
     "db:sync-sources": "bun scripts/sync-sources.ts",
+    "test": "bun test tests/",
     "ingest": "bun scripts/ingest/pipeline.ts",
     "ingest:chunk": "bun scripts/ingest/chunk.ts",
     "ingest:embed": "bun scripts/ingest/embed.ts",
