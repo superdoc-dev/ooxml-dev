@@ -24,7 +24,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
