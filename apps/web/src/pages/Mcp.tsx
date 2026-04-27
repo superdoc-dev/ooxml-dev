@@ -6,7 +6,7 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const MCP_ENDPOINT = `${import.meta.env.VITE_API_URL}/mcp`;
 const CLAUDE_COMMAND = `claude mcp add --transport http ooxml ${MCP_ENDPOINT}`;
-const CODEX_COMMAND = `codex mcp add ooxml --transport http ${MCP_ENDPOINT}`;
+const CODEX_COMMAND = `codex mcp add ooxml --url ${MCP_ENDPOINT}`;
 const CODEX_TOML = `[mcp_servers.ooxml]
 url = "${MCP_ENDPOINT}"`;
 

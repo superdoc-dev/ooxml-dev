@@ -34,7 +34,7 @@ claude mcp add --transport http ooxml https://api.ooxml.dev/mcp
 **Codex CLI**
 
 ```bash
-codex mcp add ooxml --transport http https://api.ooxml.dev/mcp
+codex mcp add ooxml --url https://api.ooxml.dev/mcp
 ```
 
 Or in `~/.codex/config.toml`:
