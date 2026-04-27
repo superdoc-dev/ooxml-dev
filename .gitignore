@@ -6,3 +6,6 @@ dev/
 .env
 .mcp.json
 .vscode/
+
+# Local-only planning doc (public repo)
+PLAN.md
