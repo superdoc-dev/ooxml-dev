@@ -48,5 +48,9 @@
   <xsd:attributeGroup name="AG_TableProps">
     <xsd:attribute name="cols" type="xsd:int"/>
   </xsd:attributeGroup>
+  <xsd:complexType name="CT_TableUser">
+    <xsd:attributeGroup ref="AG_TableProps"/>
+    <xsd:attribute name="caption" type="xsd:string" use="required"/>
+  </xsd:complexType>
   <xsd:element name="document" type="CT_Empty"/>
 </xsd:schema>

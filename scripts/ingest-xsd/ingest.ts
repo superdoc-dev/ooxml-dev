@@ -64,6 +64,11 @@ export interface IngestStats {
 	groupRefsInserted: number;
 	groupRefsUnresolved: number;
 	localElementsCreated: number;
+	attrEdgesInserted: number;
+	attrEdgesUnresolved: number;
+	attrGroupRefsInserted: number;
+	attrGroupRefsUnresolved: number;
+	enumsInserted: number;
 }
 
 export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<IngestStats> {
@@ -86,6 +91,11 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 		groupRefsInserted: 0,
 		groupRefsUnresolved: 0,
 		localElementsCreated: 0,
+		attrEdgesInserted: 0,
+		attrEdgesUnresolved: 0,
+		attrGroupRefsInserted: 0,
+		attrGroupRefsUnresolved: 0,
+		enumsInserted: 0,
 	};
 
 	await opts.db.sql.begin(async (sql: Sql) => {
@@ -238,6 +248,79 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 							await handleGroupRef(child, topOrder, ctx);
 							topOrder++;
 						}
+					}
+				}
+			}
+		}
+
+		// Pass 4: attributes, attributeGroup refs, and simpleType enumerations.
+		// Same delete-and-rewrite strategy as Pass 3. xsd_group_edges already
+		// cleared by Pass 3, so attributeGroup ref inserts here are fresh.
+		await sql`DELETE FROM xsd_attr_edges WHERE profile_id = ${profileId}`;
+		await sql`DELETE FROM xsd_enums WHERE profile_id = ${profileId}`;
+
+		for (const decls of parseResult.declarationsByQName.values()) {
+			for (const decl of decls) {
+				const ownerSymbolId = symbolIds.get(
+					symbolKey(decl.vocabularyId, decl.localName, decl.kind),
+				);
+				if (ownerSymbolId == null) continue;
+				const prefixMap = parseResult.namespaceByPrefix.get(decl.documentPath);
+				if (!prefixMap) continue;
+
+				if (decl.kind === "complexType" || decl.kind === "attributeGroup") {
+					const parents = findAttributeParents(decl);
+					let order = 0;
+					for (const parent of parents) {
+						for (const child of nodeChildrenLocal(parent)) {
+							const tag = stripPrefixLocal(nodeTagLocal(child));
+							if (tag === "attribute") {
+								await handleAttribute(
+									sql,
+									child,
+									ownerSymbolId,
+									profileId,
+									prefixMap,
+									decl.namespace,
+									symbolIds,
+									order,
+									stats,
+								);
+								order++;
+							} else if (tag === "attributeGroup") {
+								const a = nodeAttrs(child);
+								if (!a.ref) continue;
+								const resolved = resolveQNameAttr(a.ref, prefixMap, decl.namespace);
+								if (!resolved.resolved || !resolved.qname.vocabularyId) {
+									stats.attrGroupRefsUnresolved++;
+									continue;
+								}
+								const groupSymbolId = symbolIds.get(
+									symbolKey(resolved.qname.vocabularyId, resolved.qname.localName, "attributeGroup"),
+								);
+								if (groupSymbolId == null) {
+									stats.attrGroupRefsUnresolved++;
+									continue;
+								}
+								await insertGroupEdge(
+									sql,
+									ownerSymbolId,
+									groupSymbolId,
+									profileId,
+									"attributeGroup",
+									order,
+								);
+								stats.attrGroupRefsInserted++;
+								order++;
+							}
+						}
+					}
+				} else if (decl.kind === "simpleType") {
+					let order = 0;
+					for (const value of findEnumValues(decl)) {
+						await insertEnum(sql, ownerSymbolId, profileId, value, order);
+						stats.enumsInserted++;
+						order++;
 					}
 				}
 			}
@@ -555,6 +638,143 @@ async function insertGroupEdge(
 	`;
 }
 
+async function insertAttrEdge(
+	sql: Sql,
+	symbolId: number,
+	attrSymbolId: number | null,
+	localName: string,
+	profileId: number,
+	attrUse: "required" | "optional" | "prohibited",
+	defaultValue: string | null,
+	fixedValue: string | null,
+	typeRef: string | null,
+	orderIndex: number,
+): Promise<void> {
+	await sql`
+		INSERT INTO xsd_attr_edges
+			(symbol_id, attr_symbol_id, local_name, profile_id, attr_use, default_value, fixed_value, type_ref, order_index)
+		VALUES
+			(${symbolId}, ${attrSymbolId}, ${localName}, ${profileId}, ${attrUse}, ${defaultValue}, ${fixedValue}, ${typeRef}, ${orderIndex})
+	`;
+}
+
+async function insertEnum(
+	sql: Sql,
+	symbolId: number,
+	profileId: number,
+	value: string,
+	orderIndex: number,
+): Promise<void> {
+	await sql`
+		INSERT INTO xsd_enums (symbol_id, profile_id, value, order_index)
+		VALUES (${symbolId}, ${profileId}, ${value}, ${orderIndex})
+	`;
+}
+
+/**
+ * Locate the nodes whose direct children are xsd:attribute / xsd:attributeGroup.
+ * For complexType: the type itself when there's no complexContent/simpleContent
+ * wrapper, otherwise the inner extension/restriction nodes.
+ * For attributeGroup: the group node itself.
+ */
+function findAttributeParents(decl: Declaration): PreserveOrderNode[] {
+	if (decl.kind === "attributeGroup") return [decl.node];
+	if (decl.kind !== "complexType") return [];
+
+	const out: PreserveOrderNode[] = [];
+	let sawWrapper = false;
+	for (const child of nodeChildrenLocal(decl.node)) {
+		const tag = stripPrefixLocal(nodeTagLocal(child));
+		if (tag === "complexContent" || tag === "simpleContent") {
+			sawWrapper = true;
+			for (const inner of nodeChildrenLocal(child)) {
+				const innerTag = stripPrefixLocal(nodeTagLocal(inner));
+				if (innerTag === "extension" || innerTag === "restriction") out.push(inner);
+			}
+		}
+	}
+	if (!sawWrapper) out.push(decl.node);
+	return out;
+}
+
+/** xsd:simpleType > xsd:restriction > xsd:enumeration values, in order. */
+function findEnumValues(decl: Declaration): string[] {
+	const values: string[] = [];
+	for (const child of nodeChildrenLocal(decl.node)) {
+		const tag = stripPrefixLocal(nodeTagLocal(child));
+		if (tag !== "restriction") continue;
+		for (const e of nodeChildrenLocal(child)) {
+			const eTag = stripPrefixLocal(nodeTagLocal(e));
+			if (eTag !== "enumeration") continue;
+			const a = nodeAttrs(e);
+			if (a.value !== undefined) values.push(a.value);
+		}
+	}
+	return values;
+}
+
+async function handleAttribute(
+	sql: Sql,
+	node: PreserveOrderNode,
+	ownerSymbolId: number,
+	profileId: number,
+	prefixMap: Map<string, string>,
+	defaultNamespace: string,
+	symbolIds: Map<string, number>,
+	orderIndex: number,
+	stats: IngestStats,
+): Promise<void> {
+	const a = nodeAttrs(node);
+	let localName: string | null = null;
+	let attrSymbolId: number | null = null;
+	let typeRef: string | null = null;
+
+	if (a.ref) {
+		const resolved = resolveQNameAttr(a.ref, prefixMap, defaultNamespace);
+		if (!resolved.resolved || !resolved.qname.vocabularyId) {
+			stats.attrEdgesUnresolved++;
+			return;
+		}
+		localName = resolved.qname.localName;
+		const id = symbolIds.get(
+			symbolKey(resolved.qname.vocabularyId, resolved.qname.localName, "attribute"),
+		);
+		if (id != null) attrSymbolId = id;
+	} else if (a.name) {
+		localName = a.name;
+		if (a.type) {
+			const resolved = resolveQNameAttr(a.type, prefixMap, defaultNamespace);
+			if (resolved.resolved) {
+				typeRef = `{${resolved.qname.namespace}}${resolved.qname.localName}`;
+			} else {
+				typeRef = a.type; // store raw if unresolvable; never lose info
+			}
+		}
+	}
+
+	if (!localName) return;
+
+	const rawUse = a.use;
+	const attrUse: "required" | "optional" | "prohibited" =
+		rawUse === "required" || rawUse === "optional" || rawUse === "prohibited"
+			? rawUse
+			: "optional";
+
+	await insertAttrEdge(
+		sql,
+		ownerSymbolId,
+		attrSymbolId,
+		localName,
+		profileId,
+		attrUse,
+		a.default ?? null,
+		a.fixed ?? null,
+		typeRef,
+		orderIndex,
+	);
+	stats.attrEdgesInserted++;
+}
+
 // --- Inheritance discovery from AST -------------------------------------
 
 interface InheritanceFinding {
@@ -663,6 +883,11 @@ async function main() {
 		console.log(`group refs:          ${stats.groupRefsInserted}`);
 		console.log(`group refs unres.:   ${stats.groupRefsUnresolved}`);
 		console.log(`local elements:      ${stats.localElementsCreated}`);
+		console.log(`attr edges:          ${stats.attrEdgesInserted}`);
+		console.log(`attr edges unres.:   ${stats.attrEdgesUnresolved}`);
+		console.log(`attrGroup refs:      ${stats.attrGroupRefsInserted}`);
+		console.log(`attrGroup refs unr.: ${stats.attrGroupRefsUnresolved}`);
+		console.log(`enums:               ${stats.enumsInserted}`);
 		console.log(`elapsed:             ${ms}ms`);
 	} finally {
 		await db.close();
