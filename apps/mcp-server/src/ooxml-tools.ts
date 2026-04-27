@@ -10,6 +10,7 @@
  */
 
 import { neon } from "@neondatabase/serverless";
+import type { ToolDef } from "./mcp";
 import {
 	type AttrEntry,
 	type ChildEdge,
@@ -33,7 +34,7 @@ export interface OoxmlEnv {
 	DATABASE_URL: string;
 }
 
-export const OOXML_TOOL_DEFS = [
+export const OOXML_TOOL_DEFS: ToolDef[] = [
 	{
 		name: "ooxml_element",
 		description:

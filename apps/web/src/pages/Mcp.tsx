@@ -59,7 +59,7 @@ const SCHEMA_TOOLS = [
 
 const EXAMPLE_QUERIES = [
 	"How do I add borders to a table cell?",
-	"What's the difference between w:pPr and w:rPr?",
+	"How does numbering work in WordprocessingML?",
 	"What are the legal children of w:CT_Tbl?",
 	"List all attributes of w:CT_R, including inherited ones.",
 ];

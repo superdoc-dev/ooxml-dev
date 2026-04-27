@@ -37,8 +37,20 @@ const PART_DESCRIPTIONS: Record<number, string> = {
 	4: "Transitional Migration Features",
 };
 
+/** Shape of an MCP tool definition. Shared with OOXML_TOOL_DEFS so a future
+ * field added to one (annotations, outputSchema, etc.) widens both arrays. */
+export interface ToolDef {
+	name: string;
+	description: string;
+	inputSchema: {
+		type: "object";
+		properties: Record<string, unknown>;
+		required?: string[];
+	};
+}
+
 // Tool definitions
-export const TOOLS = [
+export const TOOLS: ToolDef[] = [
 	{
 		name: "ooxml_search",
 		description:
