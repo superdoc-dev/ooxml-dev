@@ -68,16 +68,23 @@ async function main() {
 			);
 		}
 
-		const [ecma] = await sql<[{ id: number } | undefined]>`
-			SELECT id FROM reference_sources WHERE name = 'ecma-376' LIMIT 1
-		`;
-		if (ecma) {
-			const result = await sql`
-				UPDATE spec_content SET source_id = ${ecma.id} WHERE source_id IS NULL
+		// Backfill spec_content.source_id by part_number to the matching
+		// ecma-376-partN row. Idempotent: only touches rows where source_id IS NULL.
+		for (let part = 1; part <= 4; part++) {
+			const sourceName = `ecma-376-part${part}`;
+			const [src] = await sql<[{ id: number } | undefined]>`
+				SELECT id FROM reference_sources WHERE name = ${sourceName} LIMIT 1
 			`;
-			console.log(`Backfilled ${result.count} spec_content row(s) -> source_id=${ecma.id}`);
-		} else {
-			console.warn("No ecma-376 source row found; skipped spec_content backfill.");
+			if (!src) continue;
+			const result = await sql`
+				UPDATE spec_content SET source_id = ${src.id}
+				WHERE part_number = ${part} AND source_id IS NULL
+			`;
+			if (result.count > 0) {
+				console.log(
+					`Backfilled ${result.count} spec_content row(s) (part ${part}) -> source_id=${src.id}`,
+				);
+			}
 		}
 	} finally {
 		await db.close();
