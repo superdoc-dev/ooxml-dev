@@ -22,6 +22,7 @@
     "db:migrate": "bun scripts/db-migrate.ts",
     "db:sync-sources": "bun scripts/sync-sources.ts",
     "xsd:fetch": "bun scripts/fetch-xsd.ts",
+    "xsd:smoke": "bun scripts/ingest-xsd/smoke.ts",
     "test": "bun test tests/",
     "ingest": "bun scripts/ingest/pipeline.ts",
     "ingest:chunk": "bun scripts/ingest/chunk.ts",
@@ -35,6 +36,7 @@
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.2",
+    "fast-xml-parser": "^5.7.2",
     "lefthook": "^2.0.16",
     "semantic-release": "^25.0.2",
     "typescript": "~5.9.3"

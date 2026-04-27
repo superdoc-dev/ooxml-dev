@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:s="http://schemas.openxmlformats.org/officeDocument/2006/sharedTypes"
+  xmlns="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  targetNamespace="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <xsd:import namespace="http://schemas.openxmlformats.org/officeDocument/2006/sharedTypes"
+    schemaLocation="shared.xsd"/>
+  <xsd:complexType name="CT_Empty"/>
+  <xsd:complexType name="CT_Para">
+    <xsd:sequence>
+      <xsd:element name="text" type="xsd:string"/>
+    </xsd:sequence>
+    <xsd:attribute name="bold" type="s:ST_OnOff"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_Jc">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="left"/>
+      <xsd:enumeration value="center"/>
+      <xsd:enumeration value="right"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:group name="EG_PContent">
+    <xsd:choice>
+      <xsd:element name="r" type="xsd:string"/>
+    </xsd:choice>
+  </xsd:group>
+  <xsd:attributeGroup name="AG_TableProps">
+    <xsd:attribute name="cols" type="xsd:int"/>
+  </xsd:attributeGroup>
+  <xsd:element name="document" type="CT_Empty"/>
+</xsd:schema>

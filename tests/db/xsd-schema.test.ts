@@ -19,31 +19,35 @@ if (!databaseUrl) {
 
 let db: DbClient;
 
+const TRUNCATE_SQL = `
+	TRUNCATE
+		behavior_notes,
+		xsd_enums,
+		xsd_inheritance_edges,
+		xsd_group_edges,
+		xsd_attr_edges,
+		xsd_child_edges,
+		xsd_compositors,
+		xsd_symbol_profiles,
+		xsd_symbols,
+		xsd_namespaces,
+		xsd_profiles
+	RESTART IDENTITY CASCADE
+`;
+
 beforeAll(() => {
 	db = createDbClient(databaseUrl);
 });
 
 afterAll(async () => {
+	// Final cleanup so the dev DB doesn't carry the last test's rows.
+	await db.sql.unsafe(TRUNCATE_SQL);
 	await db.close();
 });
 
 beforeEach(async () => {
 	// Wipe phase-2 tables; spec_content / reference_sources untouched.
-	await db.sql`
-		TRUNCATE
-			behavior_notes,
-			xsd_enums,
-			xsd_inheritance_edges,
-			xsd_group_edges,
-			xsd_attr_edges,
-			xsd_child_edges,
-			xsd_compositors,
-			xsd_symbol_profiles,
-			xsd_symbols,
-			xsd_namespaces,
-			xsd_profiles
-		RESTART IDENTITY CASCADE
-	`;
+	await db.sql.unsafe(TRUNCATE_SQL);
 });
 
 // expect(promise).rejects.toThrow() doesn't trigger the postgres library's lazy
