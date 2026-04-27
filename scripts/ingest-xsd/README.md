@@ -66,8 +66,15 @@ bun run xsd:ingest --schema-dir <path> --entrypoint <file> \
 
 ## Smoke-test the result
 
+The query layer is exercised by `tests/mcp-server/ooxml-queries.test.ts`
+against the same fixtures the ingest tests use. Run with:
+
 ```bash
-bun run ooxml:call ooxml_children   '{"qname":"w:tbl"}'
-bun run ooxml:call ooxml_attributes '{"qname":"w:pBdr"}'
-bun run ooxml:call ooxml_enum       '{"qname":"w:ST_Jc"}'
+bun test tests/mcp-server/
 ```
+
+To hit the live MCP, deploy the Worker and call the tools through any
+MCP client. For local poking against the dev DB, write a small bun
+script that imports `runOoxmlTool` from
+`apps/mcp-server/src/ooxml-tools.ts` with a `postgres.js`-backed sql
+function.

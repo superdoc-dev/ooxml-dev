@@ -37,7 +37,6 @@ scripts/
   ingest-xsd/          ECMA XSDs -> schema graph (structural query corpus)
   sources-sync.ts      data/sources.json -> reference_sources
   db-migrate.ts        Apply db/migrations/*.sql in order
-  ooxml-call.ts        Local CLI harness for the structural MCP tools
 db/
   schema.sql           PostgreSQL + pgvector + XSD schema graph
   migrations/          Numbered, idempotent SQL migrations

@@ -28,7 +28,6 @@
     "pdf:setup": "pip install -r scripts/requirements.txt",
     "xsd:fetch": "bun scripts/ingest-xsd/fetch.ts",
     "xsd:ingest": "bun scripts/ingest-xsd/ingest.ts",
-    "ooxml:call": "bun scripts/ooxml-call.ts",
     "test": "export TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/ecma_spec} && bun test tests/db/ && bun test tests/ingest-xsd/ && bun test tests/mcp-server/"
   },
   "devDependencies": {

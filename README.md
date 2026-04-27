@@ -10,9 +10,10 @@ The OOXML spec, explained by people who actually implemented it.
 
 An interactive reference for ECMA-376 (Office Open XML) built by the [SuperDoc — DOCX editing and tooling](https://superdoc.dev) team. Every page combines XML structure, live rendered previews, and implementation notes that tell you what the spec doesn't.
 
-- **Live previews** — Edit XML and see it render in real-time. Every example is a working document.
-- **Implementation notes** — Where Word diverges from the spec, what will break your code, and what to do about it.
-- **Semantic spec search** — 18,000+ spec chunks searchable by meaning via MCP server.
+- **Live previews** - Edit XML and see it render in real-time. Every example is a working document.
+- **Implementation notes** - Where Word diverges from the spec, what will break your code, and what to do about it.
+- **Semantic spec search** - 18,000+ spec chunks searchable by meaning via MCP server.
+- **Structural schema lookup** - Element children, attributes, types, enums, namespaces. Same MCP server, deterministic answers from the parsed XSDs.
 
 ## Why?
 
@@ -22,13 +23,16 @@ We faced this at SuperDoc — building a document engine on native OOXML with no
 
 ## MCP Server
 
-Search the ECMA-376 spec with AI. Ask questions in natural language, get answers grounded in the actual specification.
+Ask questions in natural language and get answers grounded in the spec, or query the schema graph for precise structural answers.
 
 ```bash
 claude mcp add --transport http ecma-spec https://api.ooxml.dev/mcp
 ```
 
-Works with Claude Code, Cursor, and any MCP-compatible client. Three tools: `search_ecma_spec` (semantic search), `get_section` (by ID), and `list_parts` (browse structure).
+Works with Claude Code, Cursor, and any MCP-compatible client. Two flavors of tools share one server:
+
+- **Semantic** (over the spec PDF): `search_ecma_spec`, `get_section`, `list_parts`
+- **Structural** (over the parsed XSDs): `ooxml_lookup_element`, `ooxml_lookup_type`, `ooxml_children`, `ooxml_attributes`, `ooxml_enum`, `ooxml_namespace_info`
 
 ## Development
 
