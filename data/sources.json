@@ -15,9 +15,9 @@
       "kind": "xsd",
       "edition": "5th",
       "version": "2016-12",
-      "url": "https://ecma-international.org/publications-and-standards/standards/ecma-376/",
+      "url": "https://ecma-international.org/wp-content/uploads/ECMA-376-4_5th_edition_december_2016.zip",
       "license_note": "Published by Ecma International. See the ECMA-376 publications page for the current download and licensing terms before redistribution.",
-      "sha256": null
+      "sha256": "bd25da1109f73762356596918bf5ff8b74a1331642dba5f1c1d1dfc6bed34ecd"
     }
   ]
 }
