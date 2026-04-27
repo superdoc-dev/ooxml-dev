@@ -23,6 +23,7 @@
     "db:sync-sources": "bun scripts/sync-sources.ts",
     "xsd:fetch": "bun scripts/fetch-xsd.ts",
     "xsd:smoke": "bun scripts/ingest-xsd/smoke.ts",
+    "xsd:ingest": "bun scripts/ingest-xsd/ingest.ts",
     "test": "bun test tests/",
     "ingest": "bun scripts/ingest/pipeline.ts",
     "ingest:chunk": "bun scripts/ingest/chunk.ts",

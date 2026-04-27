@@ -29,18 +29,16 @@ export interface UnresolvedQName {
 	reason: "unknown-prefix" | "unknown-namespace";
 }
 
-export type QNameResult = { resolved: true; qname: ResolvedQName } | { resolved: false; qname: UnresolvedQName };
+export type QNameResult =
+	| { resolved: true; qname: ResolvedQName }
+	| { resolved: false; qname: UnresolvedQName };
 
 /**
  * Canonical key for the declarationsByQName map.
  * Clark-style namespace prefix plus the kind, e.g.:
  *   {http://schemas.openxmlformats.org/wordprocessingml/2006/main}complexType:CT_Tbl
  */
-export function declarationQNameKey(
-	namespace: string,
-	kind: string,
-	localName: string,
-): string {
+export function declarationQNameKey(namespace: string, kind: string, localName: string): string {
 	return `{${namespace}}${kind}:${localName}`;
 }
 

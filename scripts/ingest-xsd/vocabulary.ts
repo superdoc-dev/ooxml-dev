@@ -43,9 +43,12 @@ export const NAMESPACE_TO_VOCABULARY: Record<string, string> = {
 	"http://schemas.openxmlformats.org/officeDocument/2006/relationships": "shared-relationships",
 	"http://schemas.openxmlformats.org/officeDocument/2006/customXml": "shared-customXml",
 	"http://schemas.openxmlformats.org/officeDocument/2006/bibliography": "shared-bibliography",
-	"http://schemas.openxmlformats.org/officeDocument/2006/characteristics": "shared-additionalCharacteristics",
-	"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties": "shared-extendedProperties",
-	"http://schemas.openxmlformats.org/officeDocument/2006/custom-properties": "shared-customProperties",
+	"http://schemas.openxmlformats.org/officeDocument/2006/characteristics":
+		"shared-additionalCharacteristics",
+	"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties":
+		"shared-extendedProperties",
+	"http://schemas.openxmlformats.org/officeDocument/2006/custom-properties":
+		"shared-customProperties",
 	"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes": "shared-docPropsVTypes",
 
 	// Schema library (XML schema references)

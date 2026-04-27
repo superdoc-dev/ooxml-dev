@@ -12,6 +12,18 @@
     </xsd:sequence>
     <xsd:attribute name="bold" type="s:ST_OnOff"/>
   </xsd:complexType>
+  <xsd:complexType name="CT_Extended">
+    <xsd:complexContent>
+      <xsd:extension base="CT_Empty">
+        <xsd:attribute name="extra" type="xsd:string"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Restricted">
+    <xsd:complexContent>
+      <xsd:restriction base="CT_Para"/>
+    </xsd:complexContent>
+  </xsd:complexType>
   <xsd:simpleType name="ST_Jc">
     <xsd:restriction base="xsd:string">
       <xsd:enumeration value="left"/>

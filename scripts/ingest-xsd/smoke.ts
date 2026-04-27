@@ -50,9 +50,7 @@ async function main() {
 		const imports = set.importGraph.get(ep) ?? [];
 		console.log(`  imports (${imports.length}):`);
 		for (const imp of imports) {
-			console.log(
-				`    ${imp.namespace}  →  ${imp.target ?? "(no schemaLocation)"}`,
-			);
+			console.log(`    ${imp.namespace}  →  ${imp.target ?? "(no schemaLocation)"}`);
 		}
 		console.log();
 	}
