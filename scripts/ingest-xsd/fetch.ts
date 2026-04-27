@@ -6,21 +6,20 @@
  * which in turn contains the 26 Transitional XSDs (wml.xsd, dml-main.xsd,
  * sml.xsd, pml.xsd, shared-*.xsd, and friends).
  *
+ * URL and sha256 are read from data/sources.json's ecma-376-transitional
+ * entry by default. CLI flags and env vars override; useful for testing a
+ * new edition before pinning it in the manifest.
+ *
  * Cache layout:
  *   data/xsd-cache/
  *     _staging/                         (outer + inner zip extraction scratch)
  *     ecma-376-transitional/            (final XSDs land here)
  *
  * Usage:
- *   bun scripts/ingest-xsd/fetch.ts --url <part4-zip-url>
- *   bun scripts/ingest-xsd/fetch.ts --url <url> --expected-sha256 <hex>
- *
- * Or via env:
- *   XSD_PART4_URL=<url> bun scripts/ingest-xsd/fetch.ts
- *
- * After a successful fetch the script prints the outer-zip sha256;
- * paste it into data/sources.json under the ecma-376-transitional entry
- * to pin reproducibility.
+ *   bun run xsd:fetch                                       (manifest default)
+ *   bun run xsd:fetch -- --url <other-url>                  (override URL)
+ *   bun run xsd:fetch -- --expected-sha256 <hex>            (override hash)
+ *   XSD_PART4_URL=<url> bun run xsd:fetch                   (override via env)
  */
 
 import { createHash } from "node:crypto";
@@ -39,22 +38,57 @@ interface Args {
 	innerZip: string;
 }
 
-function parseArgs(): Args {
+interface SourceManifestEntry {
+	name: string;
+	url?: string;
+	sha256?: string | null;
+}
+
+interface SourceManifest {
+	sources: SourceManifestEntry[];
+}
+
+async function loadManifestDefault(): Promise<{ url: string | null; sha256: string | null }> {
+	try {
+		const raw = await Bun.file("./data/sources.json").text();
+		const manifest = JSON.parse(raw) as SourceManifest;
+		const ecma = manifest.sources?.find((s) => s.name === "ecma-376-transitional");
+		return {
+			url: ecma?.url ?? null,
+			sha256: ecma?.sha256 ?? null,
+		};
+	} catch {
+		return { url: null, sha256: null };
+	}
+}
+
+async function parseArgs(): Promise<Args> {
 	const argv = process.argv.slice(2);
-	let url = process.env.XSD_PART4_URL ?? "";
+	let url: string | null = process.env.XSD_PART4_URL ?? null;
 	let expectedSha256: string | null = null;
 	let innerZip = DEFAULT_INNER_ZIP;
 
 	for (let i = 0; i < argv.length; i++) {
 		const a = argv[i];
-		if (a === "--url") url = argv[++i] ?? "";
+		if (a === "--url") url = argv[++i] ?? null;
 		else if (a === "--expected-sha256") expectedSha256 = argv[++i] ?? null;
 		else if (a === "--inner-zip") innerZip = argv[++i] ?? DEFAULT_INNER_ZIP;
 	}
 
+	// Fall back to the manifest for any unset values. data/sources.json is
+	// the canonical pin; we treat it as the default config so the common case
+	// is just `bun run xsd:fetch`.
+	if (!url || !expectedSha256) {
+		const fromManifest = await loadManifestDefault();
+		if (!url) url = fromManifest.url;
+		if (!expectedSha256) expectedSha256 = fromManifest.sha256;
+	}
+
 	if (!url) {
-		console.error("Missing --url (or XSD_PART4_URL env var).");
-		console.error("Pass the canonical ECMA-376 5th edition Part 4 zip URL.");
+		console.error(
+			"No URL configured. Set 'url' on the ecma-376-transitional entry in data/sources.json,",
+		);
+		console.error("or pass --url / XSD_PART4_URL.");
 		process.exit(1);
 	}
 	return { url, expectedSha256, innerZip };
@@ -100,7 +134,7 @@ function findFile(dir: string, name: string): string | null {
 }
 
 async function main() {
-	const args = parseArgs();
+	const args = await parseArgs();
 
 	await rm(STAGING_DIR, { recursive: true, force: true });
 	await rm(FINAL_DIR, { recursive: true, force: true });

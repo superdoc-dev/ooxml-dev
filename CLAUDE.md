@@ -145,7 +145,7 @@ ECMA Part 4 zip → fetch+verify (sha256) → parse → ingest (single transacti
 ```
 
 ```bash
-bun run xsd:fetch  --url <part4-zip-url> --expected-sha256 <hex>
+bun run xsd:fetch                                    # URL + sha256 from data/sources.json
 bun run xsd:ingest
 ```
 

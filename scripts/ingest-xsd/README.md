@@ -24,14 +24,21 @@ Transitional XSDs (`wml.xsd`, `dml-main.xsd`, `sml.xsd`, `pml.xsd`,
 `shared-*.xsd`, ...).
 
 ```bash
-bun run xsd:fetch \
-  --url 'https://ecma-international.org/wp-content/uploads/ECMA-376-4_5th_edition_december_2016.zip' \
-  --expected-sha256 'bd25da1109f73762356596918bf5ff8b74a1331642dba5f1c1d1dfc6bed34ecd'
+bun run xsd:fetch
 ```
 
-The script verifies the outer-zip sha256, extracts the inner zip, and lands
-the XSDs in `data/xsd-cache/ecma-376-transitional/`. The cache is gitignored;
+URL and sha256 are read from `data/sources.json`'s `ecma-376-transitional`
+entry (currently pinned to ECMA-376 5th edition, December 2016). The script
+verifies the outer-zip sha256, extracts the inner zip, and lands the XSDs
+in `data/xsd-cache/ecma-376-transitional/`. The cache is gitignored;
 nothing binary lands in the repo.
+
+To test a new edition before pinning it:
+
+```bash
+bun run xsd:fetch -- --url <other-url>                  # override URL
+bun run xsd:fetch -- --expected-sha256 <hex>            # override hash
+```
 
 ## Ingest
 
