@@ -199,7 +199,10 @@ async function getInheritanceEdge(
 		LIMIT 1
 	`;
 	if (rows.length === 0) return null;
-	return { baseId: rows[0].base_symbol_id as number, relation: rows[0].relation as InheritanceEdgeRow["relation"] };
+	return {
+		baseId: rows[0].base_symbol_id as number,
+		relation: rows[0].relation as InheritanceEdgeRow["relation"],
+	};
 }
 
 async function getSymbolName(sql: Sql, symbolId: number): Promise<string> {
@@ -234,7 +237,10 @@ async function walkCompositor(
 	source: ChildEdge["source"],
 	owningTypeName: string,
 ): Promise<ChildEdge[]> {
-	const path = [...pathSoFar, `${compositor.kind}(${formatOccurs(compositor.minOccurs, compositor.maxOccurs)})`];
+	const path = [
+		...pathSoFar,
+		`${compositor.kind}(${formatOccurs(compositor.minOccurs, compositor.maxOccurs)})`,
+	];
 
 	const elemRows = await sql`
 		SELECT 'element' AS entry_kind, s.local_name, s.vocabulary_id, ns.uri AS namespace_uri,
