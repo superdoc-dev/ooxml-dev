@@ -4,14 +4,14 @@
  * Generates embeddings for chunks using the configured provider.
  *
  * Usage:
- *   bun scripts/ingest/embed.ts <chunks-file> <output-file>
+ *   bun scripts/ingest-pdf/embed.ts <chunks-file> <output-file>
  *
  * Environment variables:
  *   EMBEDDING_PROVIDER - openai, google, voyage, or cohere (default: openai)
  *   OPENAI_API_KEY / GOOGLE_API_KEY / etc.
  *
  * Example:
- *   EMBEDDING_PROVIDER=openai bun scripts/ingest/embed.ts ./chunks/part1-chunks.json ./embedded/part1-embedded.json
+ *   EMBEDDING_PROVIDER=openai bun scripts/ingest-pdf/embed.ts ./chunks/part1-chunks.json ./embedded/part1-embedded.json
  */
 
 import {
@@ -93,7 +93,7 @@ async function main() {
 	const args = process.argv.slice(2);
 
 	if (args.length < 2) {
-		console.log("Usage: bun scripts/ingest/embed.ts <chunks-file> <output-file>");
+		console.log("Usage: bun scripts/ingest-pdf/embed.ts <chunks-file> <output-file>");
 		console.log("");
 		console.log("Environment variables:");
 		console.log("  EMBEDDING_PROVIDER - openai, google, voyage, or cohere (default: openai)");
@@ -101,7 +101,7 @@ async function main() {
 		console.log("");
 		console.log("Example:");
 		console.log(
-			"  EMBEDDING_PROVIDER=openai bun scripts/ingest/embed.ts ./chunks/part1.json ./embedded/part1.json",
+			"  EMBEDDING_PROVIDER=openai bun scripts/ingest-pdf/embed.ts ./chunks/part1.json ./embedded/part1.json",
 		);
 		process.exit(1);
 	}

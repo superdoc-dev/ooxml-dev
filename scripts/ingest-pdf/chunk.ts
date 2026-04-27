@@ -5,10 +5,10 @@
  * Respects section boundaries and handles XML examples specially.
  *
  * Usage:
- *   bun scripts/ingest/chunk.ts <extracted-dir> <output-file>
+ *   bun scripts/ingest-pdf/chunk.ts <extracted-dir> <output-file>
  *
  * Example:
- *   bun scripts/ingest/chunk.ts ./extracted/part1 ./chunks/part1-chunks.json
+ *   bun scripts/ingest-pdf/chunk.ts ./extracted/part1 ./chunks/part1-chunks.json
  */
 
 interface ExtractedSection {
@@ -151,10 +151,10 @@ async function main() {
 	const args = process.argv.slice(2);
 
 	if (args.length < 2) {
-		console.log("Usage: bun scripts/ingest/chunk.ts <extracted-dir> <output-file>");
+		console.log("Usage: bun scripts/ingest-pdf/chunk.ts <extracted-dir> <output-file>");
 		console.log("");
 		console.log("Example:");
-		console.log("  bun scripts/ingest/chunk.ts ./extracted/part1 ./chunks/part1-chunks.json");
+		console.log("  bun scripts/ingest-pdf/chunk.ts ./extracted/part1 ./chunks/part1-chunks.json");
 		process.exit(1);
 	}
 

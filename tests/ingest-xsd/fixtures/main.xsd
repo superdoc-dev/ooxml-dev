@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:s="http://schemas.openxmlformats.org/officeDocument/2006/sharedTypes"
+  xmlns="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  targetNamespace="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <xsd:import namespace="http://schemas.openxmlformats.org/officeDocument/2006/sharedTypes"
+    schemaLocation="shared.xsd"/>
+  <xsd:complexType name="CT_Empty"/>
+  <xsd:complexType name="CT_Para">
+    <xsd:sequence>
+      <xsd:element name="text" type="xsd:string"/>
+    </xsd:sequence>
+    <xsd:attribute name="bold" type="s:ST_OnOff"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Extended">
+    <xsd:complexContent>
+      <xsd:extension base="CT_Empty">
+        <xsd:attribute name="extra" type="xsd:string"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Restricted">
+    <xsd:complexContent>
+      <xsd:restriction base="CT_Para"/>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Body">
+    <xsd:sequence>
+      <xsd:element ref="document"/>
+      <xsd:choice minOccurs="0" maxOccurs="unbounded">
+        <xsd:group ref="EG_PContent"/>
+        <xsd:element name="break" type="xsd:string"/>
+      </xsd:choice>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_Jc">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="left"/>
+      <xsd:enumeration value="center"/>
+      <xsd:enumeration value="right"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:group name="EG_PContent">
+    <xsd:choice>
+      <xsd:element name="r" type="xsd:string"/>
+    </xsd:choice>
+  </xsd:group>
+  <xsd:attributeGroup name="AG_TableProps">
+    <xsd:attribute name="cols" type="xsd:int"/>
+  </xsd:attributeGroup>
+  <xsd:complexType name="CT_TableUser">
+    <xsd:attributeGroup ref="AG_TableProps"/>
+    <xsd:attribute name="caption" type="xsd:string" use="required"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_RefTest">
+    <xsd:attribute ref="s:space" use="required"/>
+  </xsd:complexType>
+  <!-- Cases for getChildren ordering across complexContent/extension. -->
+  <xsd:complexType name="CT_BaseWithChildren">
+    <xsd:sequence>
+      <xsd:element name="alpha" type="xsd:string"/>
+      <xsd:element name="beta" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_DerivedExtended">
+    <xsd:complexContent>
+      <xsd:extension base="CT_BaseWithChildren">
+        <xsd:sequence>
+          <xsd:element name="gamma" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <!-- Case for nested compositor ordering: top sequence holds an element then
+       a choice; the choice's first child must NOT shadow the top sequence's
+       later siblings. -->
+  <xsd:complexType name="CT_NestedOrder">
+    <xsd:sequence>
+      <xsd:element name="head" type="xsd:string"/>
+      <xsd:choice minOccurs="0" maxOccurs="unbounded">
+        <xsd:element name="branchA" type="xsd:string"/>
+        <xsd:element name="branchB" type="xsd:string"/>
+      </xsd:choice>
+      <xsd:element name="tail" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <!-- Cases for recursive attributeGroup walk. -->
+  <xsd:attributeGroup name="AG_Inner">
+    <xsd:attribute name="innerAttr" type="xsd:string"/>
+  </xsd:attributeGroup>
+  <xsd:attributeGroup name="AG_Outer">
+    <xsd:attributeGroup ref="AG_Inner"/>
+    <xsd:attribute name="outerAttr" type="xsd:string"/>
+  </xsd:attributeGroup>
+  <xsd:complexType name="CT_NestedAttrUser">
+    <xsd:attributeGroup ref="AG_Outer"/>
+  </xsd:complexType>
+  <!-- Mirrors the WML tblGrid case: two complexTypes both declare a local
+       element with the same name but DIFFERENT types. They must not collapse
+       into a single symbol. -->
+  <xsd:complexType name="CT_OuterA">
+    <xsd:sequence>
+      <xsd:element name="shared" type="ST_Jc"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_OuterB">
+    <xsd:sequence>
+      <xsd:element name="shared" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <!-- Mirrors WML's *Change types: a complexContent/restriction that
+       carries no attribute redeclarations should still inherit the base's
+       attribute uses, not silently drop them. -->
+  <xsd:complexType name="CT_TrackedBase">
+    <xsd:attribute name="id" type="xsd:string" use="required"/>
+    <xsd:attribute name="author" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_TrackedRestricted">
+    <xsd:complexContent>
+      <xsd:restriction base="CT_TrackedBase"/>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <!-- The restriction redeclares 'id' as optional and adds nothing else;
+       'author' should still be inherited from the base. -->
+  <xsd:complexType name="CT_OverrideDerived">
+    <xsd:complexContent>
+      <xsd:restriction base="CT_TrackedBase">
+        <xsd:attribute name="id" type="xsd:string" use="optional"/>
+      </xsd:restriction>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <xsd:element name="document" type="CT_Empty"/>
+</xsd:schema>

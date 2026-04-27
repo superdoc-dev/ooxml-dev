@@ -7,6 +7,7 @@
 import { createDb } from "./db";
 import { embedQuery } from "./embeddings";
 import type { Env } from "./index";
+import { callOoxmlTool, isOoxmlTool, OOXML_TOOL_DEFS } from "./ooxml-tools";
 
 // JSON-RPC types
 interface JsonRpcRequest {
@@ -136,9 +137,7 @@ function handleToolsList(id: number | string | null): JsonRpcResponse {
 	return {
 		jsonrpc: "2.0",
 		id,
-		result: {
-			tools: TOOLS,
-		},
+		result: { tools: [...TOOLS, ...OOXML_TOOL_DEFS] },
 	};
 }
 
@@ -161,6 +160,17 @@ async function handleToolsCall(
 
 	try {
 		let resultText: string;
+
+		// Structural OOXML tools share the dispatch with the existing semantic
+		// tools below.
+		if (isOoxmlTool(name)) {
+			resultText = await callOoxmlTool(name, args ?? {}, env);
+			return {
+				jsonrpc: "2.0",
+				id,
+				result: { content: [{ type: "text", text: resultText }] },
+			};
+		}
 
 		switch (name) {
 			case "search_ecma_spec": {

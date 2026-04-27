@@ -1,0 +1,50 @@
+{
+  "$comment": "Source manifest. Human-edited; scripts/sources-sync.ts upserts these rows into reference_sources.",
+  "sources": [
+    {
+      "name": "ecma-376-part1",
+      "kind": "spec_pdf",
+      "edition": "5th",
+      "version": "2016-12",
+      "url": "https://ecma-international.org/wp-content/uploads/ECMA-376-1_5th_edition_december_2016.zip",
+      "license_note": "Published by Ecma International. See the ECMA-376 publications page for the current download and licensing terms before redistribution.",
+      "sha256": "9d0bcad9cf06054785b03762fcfadbf6bab7e54a5f9d69434e34b7fd464d4129"
+    },
+    {
+      "name": "ecma-376-part2",
+      "kind": "spec_pdf",
+      "edition": "5th",
+      "version": "2021-12",
+      "url": "https://ecma-international.org/wp-content/uploads/ECMA-376-2_5th_edition_december_2021.zip",
+      "license_note": "Published by Ecma International. See the ECMA-376 publications page for the current download and licensing terms before redistribution.",
+      "sha256": "1d489dc491168ea1f9e9a59063acc8dd5f02b4ad1d21aa7ec19ba9a58d020c70"
+    },
+    {
+      "name": "ecma-376-part3",
+      "kind": "spec_pdf",
+      "edition": "5th",
+      "version": "2015-12",
+      "url": "https://ecma-international.org/wp-content/uploads/ECMA-376-3_5th_edition_december_2015.zip",
+      "license_note": "Published by Ecma International. See the ECMA-376 publications page for the current download and licensing terms before redistribution.",
+      "sha256": "42294159fbbbe9393ccadac95b859d7729cc68d908898bcbe31034dda059daa8"
+    },
+    {
+      "name": "ecma-376-part4",
+      "kind": "spec_pdf",
+      "edition": "5th",
+      "version": "2016-12",
+      "url": "https://ecma-international.org/wp-content/uploads/ECMA-376-4_5th_edition_december_2016.zip",
+      "license_note": "Published by Ecma International. See the ECMA-376 publications page for the current download and licensing terms before redistribution.",
+      "sha256": "bd25da1109f73762356596918bf5ff8b74a1331642dba5f1c1d1dfc6bed34ecd"
+    },
+    {
+      "name": "ecma-376-transitional",
+      "kind": "xsd",
+      "edition": "5th",
+      "version": "2016-12",
+      "url": "https://ecma-international.org/wp-content/uploads/ECMA-376-4_5th_edition_december_2016.zip",
+      "license_note": "Published by Ecma International. See the ECMA-376 publications page for the current download and licensing terms before redistribution.",
+      "sha256": "bd25da1109f73762356596918bf5ff8b74a1331642dba5f1c1d1dfc6bed34ecd"
+    }
+  ]
+}
