@@ -1,5 +1,5 @@
 /**
- * Phase 4 query layer tests. Ingests the same fixture XSDs the ingest tests use,
+ * Query layer tests. Ingests the same fixture XSDs the ingest tests use,
  * then exercises each MCP-tool query function against the populated DB.
  */
 

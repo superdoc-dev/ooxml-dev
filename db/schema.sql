@@ -44,11 +44,12 @@ CREATE INDEX idx_content_section ON spec_content(section_id);
 CREATE INDEX idx_content_source ON spec_content(source_id);
 
 -- ----------------------------------------------------------------------------
--- XSD schema graph (Phase 2)
+-- XSD schema graph
 --
 -- Profile-scoped symbol graph for OOXML schemas. Canonical symbol identity is
--- (vocabulary_id, local_name, kind); namespace URIs are profile aliases.
--- Profile membership lives on edges/profile join tables, not duplicated symbols.
+-- (vocabulary_id, local_name, kind, parent_symbol_id); namespace URIs are
+-- profile aliases. Profile membership lives on edges/profile join tables, not
+-- duplicated symbols.
 -- ----------------------------------------------------------------------------
 
 CREATE TABLE xsd_profiles (
@@ -66,7 +67,7 @@ CREATE TABLE xsd_namespaces (
 
 -- type_ref holds the Clark-style {namespace}localName for elements and attributes
 -- that declare a @type. NULL for complexType/simpleType/group/attributeGroup.
--- Phase 4 lookups follow type_ref to resolve element -> type when reading children.
+-- The lookup tools follow type_ref to resolve element -> type when reading children.
 --
 -- parent_symbol_id is NULL for top-level declarations and set to the owning
 -- type/group symbol for inline (local) element declarations. The canonical

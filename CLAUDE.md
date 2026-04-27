@@ -29,15 +29,23 @@ apps/
     src/data/docs.ts   ← All doc pages live here (single source of truth)
     src/components/    UI components (Sidebar, SuperDocPreview, etc.)
     src/pages/         Route pages (Home, Docs, SpecExplorer, Mcp)
-  mcp-server/          Cloudflare Worker — MCP server for AI spec search
+  mcp-server/          Cloudflare Worker - MCP server (semantic + structural tools)
 packages/
   shared/              Database client, embedding client, types
 scripts/
-  ingest/              PDF → chunks → embeddings → database pipeline
+  ingest-pdf/          ECMA PDF -> spec_content (semantic search corpus)
+  ingest-xsd/          ECMA XSDs -> schema graph (structural query corpus)
+  sources-sync.ts      data/sources.json -> reference_sources
+  db-migrate.ts        Apply db/migrations/*.sql in order
+  ooxml-call.ts        Local CLI harness for the structural MCP tools
 db/
-  schema.sql           PostgreSQL + pgvector schema
+  schema.sql           PostgreSQL + pgvector + XSD schema graph
+  migrations/          Numbered, idempotent SQL migrations
+data/
+  sources.json         Source manifest (artifact URLs, sha256, license notes)
+  xsd-cache/           Local-only XSD download cache (gitignored)
 dev/
-  data/                Extracted/chunked/embedded spec content
+  data/                Extracted/chunked/embedded PDF content
 ```
 
 ## Commands
@@ -97,23 +105,52 @@ The XML you provide is wrapped in a minimal `w:document > w:body` structure auto
 
 ## MCP Server
 
-Cloudflare Worker exposing three MCP tools for semantic spec search:
+Cloudflare Worker exposing two flavors of MCP tools backed by the same database:
 
-- `search_ecma_spec` — semantic vector search across 18,000+ spec chunks
-- `get_section` — fetch a specific section by ID (e.g., "17.3.1.24")
-- `list_parts` — browse the spec structure
+Always-on (semantic search over the spec PDF):
+
+- `search_ecma_spec` - semantic vector search across 18,000+ spec chunks
+- `get_section` - fetch a specific section by ID (e.g., "17.3.1.24")
+- `list_parts` - browse the spec structure
+
+Behind `ENABLE_OOXML_TOOLS` (structural queries over the XSD schema graph):
+
+- `ooxml_lookup_element` / `ooxml_lookup_type` - canonical symbol info
+- `ooxml_children` - legal children of an element/type/group, in document order
+- `ooxml_attributes` - attributes including those inherited and unfolded from attributeGroup refs
+- `ooxml_enum` - simpleType enumeration values
+- `ooxml_namespace_info` - vocabularies and per-profile symbol counts for a namespace URI
 
 Uses PostgreSQL with pgvector (Neon serverless in production, Docker locally).
 
-## Data Pipeline
+## Data Pipelines
 
-Ingests ECMA-376 PDFs into the vector database:
+Two ingest paths feed the same database. Both are reproducible from `data/sources.json`.
+
+**PDF (semantic corpus, into `spec_content`)**:
 
 ```
 PDF → extract (Python) → chunk (6KB) → embed (Voyage) → upload (PostgreSQL)
 ```
 
-Run the full pipeline: `bun scripts/ingest/pipeline.ts`
+```bash
+bun run pdf:ingest 1 ./pdfs/ECMA-376-Part1.pdf   # full pipeline for one part
+```
+
+See `scripts/ingest-pdf/README.md`.
+
+**XSD (structural corpus, into `xsd_*` tables)**:
+
+```
+ECMA Part 4 zip → fetch+verify (sha256) → parse → ingest (single transaction)
+```
+
+```bash
+bun run xsd:fetch  --url <part4-zip-url> --expected-sha256 <hex>
+bun run xsd:ingest
+```
+
+See `scripts/ingest-xsd/README.md`.
 
 ## Database
 

@@ -1,5 +1,5 @@
--- Phase 2: XSD schema tables (empty)
--- Profile-scoped symbol graph. All tables empty after this migration; data lands in Phase 3+.
+-- Profile-scoped XSD schema graph. All tables empty after this migration; data
+-- lands when scripts/ingest-xsd/ingest.ts runs against a populated cache.
 -- Idempotent: safe to run against fresh installs (matches db/schema.sql) or existing DBs.
 
 CREATE TABLE IF NOT EXISTS xsd_profiles (
@@ -116,7 +116,8 @@ CREATE TABLE IF NOT EXISTS xsd_enums (
 );
 
 -- Curated Word/Office behavior claims keyed to symbols.
--- claim_type enum is locked now (Phase 5 will populate).
+-- claim_type enum is locked now; the table stays empty until curated behavior
+-- notes start landing.
 CREATE TABLE IF NOT EXISTS behavior_notes (
 	id SERIAL PRIMARY KEY,
 	symbol_id INT REFERENCES xsd_symbols(id) ON DELETE CASCADE,

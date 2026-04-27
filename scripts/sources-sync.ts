@@ -6,7 +6,7 @@
  *   The backfill is a one-time concern; once all rows have source_id it is a no-op.
  *
  * Usage:
- *   bun scripts/sync-sources.ts
+ *   bun scripts/sources-sync.ts
  *
  * Environment:
  *   DATABASE_URL - PostgreSQL connection string

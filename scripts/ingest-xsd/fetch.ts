@@ -12,11 +12,11 @@
  *     ecma-376-transitional/            (final XSDs land here)
  *
  * Usage:
- *   bun scripts/fetch-xsd.ts --url <part4-zip-url>
- *   bun scripts/fetch-xsd.ts --url <url> --expected-sha256 <hex>
+ *   bun scripts/ingest-xsd/fetch.ts --url <part4-zip-url>
+ *   bun scripts/ingest-xsd/fetch.ts --url <url> --expected-sha256 <hex>
  *
  * Or via env:
- *   XSD_PART4_URL=<url> bun scripts/fetch-xsd.ts
+ *   XSD_PART4_URL=<url> bun scripts/ingest-xsd/fetch.ts
  *
  * After a successful fetch the script prints the outer-zip sha256;
  * paste it into data/sources.json under the ecma-376-transitional entry

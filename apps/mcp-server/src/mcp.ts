@@ -162,9 +162,9 @@ async function handleToolsCall(
 	try {
 		let resultText: string;
 
-		// Phase 4 OOXML tools, feature-flagged. tools/list also gates on the same flag,
-		// so callers should not see these tool names unless the flag is on. Defensive
-		// check here in case a caller hand-crafts a request.
+		// OOXML tools are feature-flagged; tools/list filters them out when the flag
+		// is off, so callers should not see these tool names. Defensive check here in
+		// case a caller hand-crafts a request.
 		if (isOoxmlTool(name)) {
 			if (!ooxmlToolsEnabled(env)) {
 				return {

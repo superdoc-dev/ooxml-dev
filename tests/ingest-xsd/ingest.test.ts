@@ -1,5 +1,5 @@
 /**
- * Phase 3c: ingest pass tests.
+ * Ingest pass tests.
  *
  * Each test starts with empty xsd_* / behavior_notes tables (afterEach TRUNCATE)
  * and a known reference_sources row. Uses fixture XSDs.
@@ -493,7 +493,7 @@ test.skipIf(!realCacheReady)(
 		expect(stats.groupRefsInserted).toBeGreaterThan(20);
 		expect(stats.childEdgesUnresolved).toBe(0);
 		expect(stats.groupRefsUnresolved).toBe(0);
-		// Phase 3e additions:
+		// Attribute / attributeGroup / enum coverage:
 		expect(stats.attrEdgesInserted).toBeGreaterThan(500);
 		expect(stats.attrGroupRefsInserted).toBeGreaterThan(10);
 		expect(stats.enumsInserted).toBeGreaterThan(200);

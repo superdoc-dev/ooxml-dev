@@ -25,4 +25,4 @@ A small runner script can be added later if/when phases need it.
 1. Pick the next number (`0002`, `0003`, ...).
 2. Write idempotent SQL.
 3. Update `db/schema.sql` to match the new full state.
-4. If the migration introduces curated data (e.g., source rows), let a script populate it (e.g., `scripts/sync-sources.ts`), not the SQL file.
+4. If the migration introduces curated data (e.g., source rows), let a script populate it (e.g., `scripts/sources-sync.ts`), not the SQL file.

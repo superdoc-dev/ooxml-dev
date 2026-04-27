@@ -4,13 +4,13 @@
  * Uploads embedded chunks to the database.
  *
  * Usage:
- *   bun scripts/ingest/upload.ts <part-number> <embedded-file>
+ *   bun scripts/ingest-pdf/upload.ts <part-number> <embedded-file>
  *
  * Environment variables:
  *   DATABASE_URL - PostgreSQL connection string
  *
  * Example:
- *   bun scripts/ingest/upload.ts 1 ./embedded/part1-embedded.json
+ *   bun scripts/ingest-pdf/upload.ts 1 ./embedded/part1-embedded.json
  */
 
 import { createDbClient } from "../../packages/shared/src/db/index.ts";
@@ -30,13 +30,13 @@ async function main() {
 	const args = process.argv.slice(2);
 
 	if (args.length < 2) {
-		console.log("Usage: bun scripts/ingest/upload.ts <part-number> <embedded-file>");
+		console.log("Usage: bun scripts/ingest-pdf/upload.ts <part-number> <embedded-file>");
 		console.log("");
 		console.log("Environment variables:");
 		console.log("  DATABASE_URL - PostgreSQL connection string");
 		console.log("");
 		console.log("Example:");
-		console.log("  bun scripts/ingest/upload.ts 1 ./embedded/part1-embedded.json");
+		console.log("  bun scripts/ingest-pdf/upload.ts 1 ./embedded/part1-embedded.json");
 		process.exit(1);
 	}
 

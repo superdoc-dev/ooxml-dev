@@ -1,9 +1,9 @@
 /**
- * Phase 2 acceptance tests: XSD schema integrity.
+ * XSD schema integrity tests.
  *
  * Each test starts with an empty xsd_* / behavior_notes set. spec_content and
- * reference_sources are left alone. The XSD tables are empty by design in Phase 2;
- * once Phase 3 ingests data, tests should move to a separate TEST_DATABASE_URL.
+ * reference_sources are left alone. Once a real ingest populates the dev DB,
+ * tests should move to a separate TEST_DATABASE_URL.
  *
  * Usage:
  *   DATABASE_URL=postgresql://... bun test tests/db/xsd-schema.test.ts

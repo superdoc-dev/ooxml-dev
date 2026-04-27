@@ -1,5 +1,5 @@
 /**
- * Local end-to-end harness for the Phase 4 OOXML tools.
+ * Local end-to-end harness for the OOXML structural tools.
  *
  * The deployed Worker uses @neondatabase/serverless (HTTP-only), which can't
  * talk to local Postgres. This CLI bypasses the Worker and dispatches through
@@ -7,10 +7,10 @@
  * code path that the Worker exercises runs end-to-end against the dev DB.
  *
  * Usage:
- *   bun scripts/ooxml-call.ts <tool> <jsonArgs>
- *   bun scripts/ooxml-call.ts ooxml_children '{"qname":"w:tbl"}'
- *   bun scripts/ooxml-call.ts ooxml_attributes '{"qname":"w:pBdr"}'
- *   bun scripts/ooxml-call.ts ooxml_enum '{"qname":"w:ST_Jc"}'
+ *   bun run ooxml:call <tool> <jsonArgs>
+ *   bun run ooxml:call ooxml_children '{"qname":"w:tbl"}'
+ *   bun run ooxml:call ooxml_attributes '{"qname":"w:pBdr"}'
+ *   bun run ooxml:call ooxml_enum '{"qname":"w:ST_Jc"}'
  *
  * Environment:
  *   DATABASE_URL - postgres connection string (defaults to local docker)

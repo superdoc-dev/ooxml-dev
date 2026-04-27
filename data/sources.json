@@ -1,5 +1,5 @@
 {
-  "$comment": "Source manifest. Human-edited; scripts/sync-sources.ts upserts these rows into reference_sources.",
+  "$comment": "Source manifest. Human-edited; scripts/sources-sync.ts upserts these rows into reference_sources.",
   "sources": [
     {
       "name": "ecma-376",

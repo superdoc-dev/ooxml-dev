@@ -1,5 +1,5 @@
 /**
- * Phase 3b: parser scaffolding tests.
+ * Parser scaffolding tests.
  *
  * Primary tests use tiny fixture XSDs to keep the suite fast and independent
  * of the local cache. One optional smoke test runs against the real

@@ -4,7 +4,7 @@
  * Runs the complete ingestion process: extract -> chunk -> embed -> upload
  *
  * Usage:
- *   bun scripts/ingest/pipeline.ts <part-number> <pdf-path>
+ *   bun scripts/ingest-pdf/pipeline.ts <part-number> <pdf-path>
  *
  * Environment variables:
  *   DATABASE_URL - PostgreSQL connection string
@@ -12,7 +12,7 @@
  *   OPENAI_API_KEY / GOOGLE_API_KEY / etc.
  *
  * Example:
- *   bun scripts/ingest/pipeline.ts 1 ./pdfs/ECMA-376-Part1.pdf
+ *   bun scripts/ingest-pdf/pipeline.ts 1 ./pdfs/ECMA-376-Part1.pdf
  */
 
 import { $ } from "bun";
@@ -21,7 +21,7 @@ async function main() {
 	const args = process.argv.slice(2);
 
 	if (args.length < 2) {
-		console.log("Usage: bun scripts/ingest/pipeline.ts <part-number> <pdf-path>");
+		console.log("Usage: bun scripts/ingest-pdf/pipeline.ts <part-number> <pdf-path>");
 		console.log("");
 		console.log("Environment variables:");
 		console.log("  DATABASE_URL - PostgreSQL connection string");
@@ -29,7 +29,7 @@ async function main() {
 		console.log("  OPENAI_API_KEY / GOOGLE_API_KEY / etc.");
 		console.log("");
 		console.log("Example:");
-		console.log("  bun scripts/ingest/pipeline.ts 1 ./pdfs/ECMA-376-Part1.pdf");
+		console.log("  bun scripts/ingest-pdf/pipeline.ts 1 ./pdfs/ECMA-376-Part1.pdf");
 		process.exit(1);
 	}
 
@@ -92,7 +92,7 @@ async function main() {
 		try {
 			await $`${pythonPath} -c "import pymupdf4llm" 2>/dev/null`;
 			console.log(`Using Python: ${pythonPath}`);
-			await $`${pythonPath} scripts/ingest/extract-pdf.py ${pdfPath} ${extractedDir}`;
+			await $`${pythonPath} scripts/ingest-pdf/extract.py ${pdfPath} ${extractedDir}`;
 			extractSuccess = true;
 			break;
 		} catch {
@@ -110,17 +110,17 @@ async function main() {
 	// Step 2: Chunk
 	console.log("\n[2/4] Chunking content...");
 	console.log("-".repeat(40));
-	await $`bun scripts/ingest/chunk.ts ${extractedDir} ${chunksFile}`;
+	await $`bun scripts/ingest-pdf/chunk.ts ${extractedDir} ${chunksFile}`;
 
 	// Step 3: Embed
 	console.log("\n[3/4] Generating embeddings...");
 	console.log("-".repeat(40));
-	await $`bun scripts/ingest/embed.ts ${chunksFile} ${embeddedFile}`;
+	await $`bun scripts/ingest-pdf/embed.ts ${chunksFile} ${embeddedFile}`;
 
 	// Step 4: Upload
 	console.log("\n[4/4] Uploading to database...");
 	console.log("-".repeat(40));
-	await $`bun scripts/ingest/upload.ts ${partNumber} ${embeddedFile}`;
+	await $`bun scripts/ingest-pdf/upload.ts ${partNumber} ${embeddedFile}`;
 
 	console.log(`\n${"=".repeat(60)}`);
 	console.log("Pipeline complete!");

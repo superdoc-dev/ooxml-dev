@@ -1,4 +1,4 @@
--- Phase 4 review fix: scope local element symbols by their owner.
+-- Scope local element symbols by their owner.
 --
 -- Before this migration, an inline <xsd:element name="X" type="..."/> declared
 -- inside two different complexTypes/groups collapsed to a single symbol keyed

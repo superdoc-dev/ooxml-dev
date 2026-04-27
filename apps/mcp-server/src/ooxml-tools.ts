@@ -1,14 +1,14 @@
 /**
- * Phase 4 read-only structural MCP tools. Behind ENABLE_OOXML_TOOLS env flag,
- * which gates both tools/list discovery and tools/call dispatch so the public
- * surface stays unchanged until the feature is intentionally enabled.
+ * Read-only structural MCP tools backed by the OOXML schema graph. Gated by
+ * ENABLE_OOXML_TOOLS, which filters both tools/list discovery and tools/call
+ * dispatch so the public surface stays unchanged until the flag is set.
  *
  * Tools:
  *   ooxml_lookup_element, ooxml_lookup_type, ooxml_children,
  *   ooxml_attributes, ooxml_enum, ooxml_namespace_info.
  *
- * Default profile is `transitional` until word-compatible-docx is composed
- * in Phase 6.
+ * Default profile is `transitional`. Future profiles (e.g. word-compatible-docx)
+ * will compose Transitional with Office extension schemas.
  */
 
 import { neon } from "@neondatabase/serverless";
@@ -315,8 +315,6 @@ function formatSymbolReport(label: string, hit: SymbolHit, profile: string): str
 	lines.push(`- namespace: ${hit.namespaceUri}`);
 	if (hit.typeRef) lines.push(`- type_ref: ${hit.typeRef}`);
 	if (hit.sourceName) lines.push(`- source: ${hit.sourceName}`);
-	lines.push("");
-	lines.push("_behavior notes: none yet (Phase 5)._");
 	return lines.join("\n");
 }
 
@@ -340,8 +338,6 @@ function formatChildrenReport(
 
 	if (children.length === 0) {
 		lines.push("_no direct or inherited children._");
-		lines.push("");
-		lines.push("_behavior notes: none yet (Phase 5)._");
 		return lines.join("\n");
 	}
 
@@ -359,8 +355,6 @@ function formatChildrenReport(
 	lines.push(
 		"_group entries are returned as-is; call `ooxml_children` on the group qname to expand them._",
 	);
-	lines.push("");
-	lines.push("_behavior notes: none yet (Phase 5)._");
 	return lines.join("\n");
 }
 
@@ -383,8 +377,6 @@ function formatAttributesReport(
 
 	if (attrs.length === 0) {
 		lines.push("_no attributes._");
-		lines.push("");
-		lines.push("_behavior notes: none yet (Phase 5)._");
 		return lines.join("\n");
 	}
 
@@ -401,8 +393,6 @@ function formatAttributesReport(
 			`| ${a.localName} | ${a.attrUse} | ${a.typeRef ?? "-"} | ${a.defaultValue ?? "-"} | ${a.fixedValue ?? "-"} | ${from} |`,
 		);
 	}
-	lines.push("");
-	lines.push("_behavior notes: none yet (Phase 5)._");
 	return lines.join("\n");
 }
 
@@ -420,8 +410,6 @@ function formatEnumReport(sym: SymbolHit, enums: EnumEntry[], profile: string): 
 	} else {
 		for (const e of enums) lines.push(`- ${e.value}`);
 	}
-	lines.push("");
-	lines.push("_behavior notes: none yet (Phase 5)._");
 	return lines.join("\n");
 }
 

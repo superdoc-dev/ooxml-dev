@@ -1,5 +1,4 @@
--- Phase 1: Provenance foundation
--- Adds reference_sources and source_id FK on spec_content.
+-- Provenance foundation: reference_sources catalog + source_id FK on spec_content.
 -- Idempotent: safe to run against fresh installs (matches db/schema.sql) or existing DBs.
 
 CREATE EXTENSION IF NOT EXISTS vector;

@@ -1,32 +1,29 @@
 /**
- * Phase 3c: ingest top-level symbols and inheritance edges.
+ * Ingest the OOXML schema graph from parseSchemaSet output. Runs in a single
+ * transaction and writes:
  *
- * Walks parseSchemaSet output and writes:
- *   - xsd_profiles      (bootstrap target profile, idempotent)
- *   - xsd_namespaces    (one row per unique URI seen across documents)
- *   - xsd_symbols       (canonical (vocabulary_id, local_name, kind), upsert by natural key)
- *   - xsd_symbol_profiles (membership for the target profile, with source_id)
- *   - xsd_inheritance_edges (extension/restriction from complexContent/simpleContent
- *     and simpleType/restriction)
+ *   - xsd_profiles, xsd_namespaces, xsd_symbols, xsd_symbol_profiles
+ *     (bootstrap + per-symbol membership; symbol/inheritance passes use
+ *     ON CONFLICT for natural-key idempotency)
+ *   - xsd_inheritance_edges (complexContent/simpleContent extension/restriction
+ *     and simpleType restriction)
+ *   - xsd_compositors, xsd_child_edges, xsd_group_edges (content models;
+ *     content-model rows have no natural unique key, so this pass uses
+ *     delete-and-rewrite per profile)
+ *   - xsd_attr_edges, xsd_enums (attributes, attributeGroup refs, and
+ *     simpleType enumeration values; same delete-and-rewrite pattern)
  *
- * NOT touched here (Phases 3d/3e):
- *   - xsd_compositors, xsd_child_edges (content models)
- *   - xsd_attr_edges (attributes)
- *   - xsd_group_edges (group/attributeGroup refs)
- *   - xsd_enums (simpleType enumerations)
+ * Re-running against the same source is idempotent: identical row counts on
+ * every run. Stale-row cleanup (when symbols vanish in a future edition) is
+ * deferred until needed.
  *
- * Idempotency: the entire ingest runs in a single transaction. Re-running
- * against the same source produces no new rows (UNIQUE + ON CONFLICT DO NOTHING).
- * Stale-row cleanup (when symbols vanish in a future edition) is deferred,
- * see PLAN.md "Edition flip and behavior_notes" open item.
+ * Library usage:
+ *   await ingestSchemaSet({ schemaDir, entrypoints, profileName, sourceName, db })
  *
- * Usage as a library:
- *   await ingestSchemaSet({ schemaDir, entrypoints, profileName, sourceName, sql })
- *
- * Usage as a CLI:
- *   bun scripts/ingest-xsd/ingest.ts
- *   bun scripts/ingest-xsd/ingest.ts --schema-dir <dir> --entrypoint wml.xsd \
- *                                    --profile transitional --source ecma-376-transitional
+ * CLI usage:
+ *   bun run xsd:ingest
+ *   bun run xsd:ingest --schema-dir <dir> --entrypoint wml.xsd \
+ *                      --profile transitional --source ecma-376-transitional
  */
 
 import { createDbClient, type DbClient } from "../../packages/shared/src/db/index.ts";
@@ -486,12 +483,7 @@ async function handleElement(
 		// Local elements are scoped per-owner: the same name in two different
 		// complexTypes is not the same symbol (e.g. WML's tblGrid is
 		// CT_TblGridBase inside CT_TblGridChange but CT_TblGrid inside CT_Tbl).
-		const key = symbolKey(
-			ctx.ownerDecl.vocabularyId,
-			a.name,
-			"element",
-			ctx.ownerSymbolId,
-		);
+		const key = symbolKey(ctx.ownerDecl.vocabularyId, a.name, "element", ctx.ownerSymbolId);
 		let id = ctx.symbolIds.get(key);
 		if (id == null) {
 			const res = await upsertSymbol(
@@ -936,7 +928,12 @@ function stripPrefixLocal(tag: string | null): string | null {
 	return colon < 0 ? tag : tag.slice(colon + 1);
 }
 
-function symbolKey(vocab: string, local: string, kind: string, parentId: number | null = null): string {
+function symbolKey(
+	vocab: string,
+	local: string,
+	kind: string,
+	parentId: number | null = null,
+): string {
 	return `${vocab}|${local}|${kind}|${parentId ?? ""}`;
 }
 

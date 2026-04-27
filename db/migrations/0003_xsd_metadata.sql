@@ -1,4 +1,6 @@
--- Phase 3 review fix: preserve element/attribute @type and group-ref compositor context.
+-- Preserve element/attribute @type and group-ref compositor context so the
+-- structural lookup tools can resolve element-to-type chains and attach refs
+-- to their enclosing compositor.
 -- Idempotent.
 
 ALTER TABLE xsd_symbols
