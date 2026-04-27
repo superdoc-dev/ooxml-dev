@@ -175,15 +175,25 @@ test("ingest is idempotent: re-running adds no new symbols/edges", async () => {
 	expect(second.symbolsExisting).toBeGreaterThan(0);
 	expect(second.profileMembershipsInserted).toBe(0);
 	expect(second.inheritanceEdgesInserted).toBe(0);
+	// Content-model passes use delete-and-rewrite, so insert counts equal
+	// the first run on every re-run; DB row counts stay stable.
+	expect(second.compositorsInserted).toBe(first.compositorsInserted);
+	expect(second.childEdgesInserted).toBe(first.childEdgesInserted);
+	expect(second.groupRefsInserted).toBe(first.groupRefsInserted);
 
 	// Row counts unchanged between first and second runs.
 	const [c1] = await db.sql`SELECT COUNT(*)::int AS c FROM xsd_symbols`;
 	const [c2] = await db.sql`SELECT COUNT(*)::int AS c FROM xsd_symbol_profiles`;
 	const [c3] = await db.sql`SELECT COUNT(*)::int AS c FROM xsd_inheritance_edges`;
+	const [c4] = await db.sql`SELECT COUNT(*)::int AS c FROM xsd_compositors`;
+	const [c5] = await db.sql`SELECT COUNT(*)::int AS c FROM xsd_child_edges`;
+	const [c6] = await db.sql`SELECT COUNT(*)::int AS c FROM xsd_group_edges`;
 	expect(c1.c).toBe(first.symbolsInserted);
-	// One membership per symbol per profile.
 	expect(c2.c).toBe(first.profileMembershipsInserted);
 	expect(c3.c).toBe(first.inheritanceEdgesInserted);
+	expect(c4.c).toBe(first.compositorsInserted);
+	expect(c5.c).toBe(first.childEdgesInserted);
+	expect(c6.c).toBe(first.groupRefsInserted);
 });
 
 test("ingest writes compositors and child edges for nested content models", async () => {

@@ -195,6 +195,16 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 		// emit xsd_compositors / xsd_child_edges / xsd_group_edges. Local element
 		// declarations are deduped under (owner-vocab, name, element); cross-CT
 		// reuse of a local name collapses to one symbol.
+		//
+		// Idempotency strategy: content-model rows have no natural unique key
+		// (a single complexType can hold multiple sibling compositors of the same
+		// kind), so we delete-and-rewrite per profile. xsd_child_edges FK on
+		// xsd_compositors with ON DELETE CASCADE handles child_edges cleanup.
+		// Assumes one source per profile, which holds today; revisit when
+		// multiple sources contribute to the same profile.
+		await sql`DELETE FROM xsd_compositors WHERE profile_id = ${profileId}`;
+		await sql`DELETE FROM xsd_group_edges WHERE profile_id = ${profileId}`;
+
 		for (const decls of parseResult.declarationsByQName.values()) {
 			for (const decl of decls) {
 				if (decl.kind !== "complexType" && decl.kind !== "group") continue;
