@@ -7,7 +7,16 @@
       "edition": "unknown",
       "version": null,
       "url": "https://ecma-international.org/publications-and-standards/standards/ecma-376/",
-      "license_note": "ECMA-376 is freely available under ECMA terms; redistribution permitted with attribution.",
+      "license_note": "Published by Ecma International. See the ECMA-376 publications page for the current download and licensing terms before redistribution.",
+      "sha256": null
+    },
+    {
+      "name": "ecma-376-transitional",
+      "kind": "xsd",
+      "edition": "5th",
+      "version": "2016-12",
+      "url": "https://ecma-international.org/publications-and-standards/standards/ecma-376/",
+      "license_note": "Published by Ecma International. See the ECMA-376 publications page for the current download and licensing terms before redistribution.",
       "sha256": null
     }
   ]

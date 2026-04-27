@@ -9,3 +9,6 @@ dev/
 
 # Local-only planning doc (public repo)
 PLAN.md
+
+# XSD/spec artifacts: pulled by scripts/fetch-xsd.ts; never committed.
+data/xsd-cache/
