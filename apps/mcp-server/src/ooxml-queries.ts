@@ -1,7 +1,7 @@
 /**
  * Read-only schema-graph queries powering the OOXML MCP tools:
- *   ooxml_lookup_element, ooxml_lookup_type, ooxml_children,
- *   ooxml_attributes, ooxml_enum, ooxml_namespace_info.
+ *   ooxml_element, ooxml_type, ooxml_children,
+ *   ooxml_attributes, ooxml_enum, ooxml_namespace.
  *
  * These take a tagged-template SQL function (Neon in the deployed Worker,
  * postgres.js in local tests). All queries are profile-scoped and walk

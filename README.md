@@ -1,7 +1,7 @@
 <img width="300" alt="logo" src="https://github.com/user-attachments/assets/df6311a6-c050-4592-bbf1-4a2228655bc3" />
 
-[![Web](https://img.shields.io/badge/Web-v0.1.3-blue)](https://ooxml.dev)
-[![MCP Server](https://img.shields.io/badge/MCP_Server-v0.0.1-blue)](https://api.ooxml.dev/mcp)
+[![Web](https://img.shields.io/github/v/tag/superdoc-dev/ooxml-dev?filter=web-v*&label=Web&color=blue)](https://ooxml.dev)
+[![MCP Server](https://img.shields.io/github/v/tag/superdoc-dev/ooxml-dev?filter=mcp-v*&label=MCP%20Server&color=blue)](https://api.ooxml.dev/mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 The OOXML spec, explained by people who actually implemented it.
@@ -23,16 +23,41 @@ We faced this at SuperDoc — building a document engine on native OOXML with no
 
 ## MCP Server
 
-Ask questions in natural language and get answers grounded in the spec, or query the schema graph for precise structural answers.
+Ask questions in natural language and get answers grounded in the spec, or query the schema graph for precise structural answers. Works with Claude Code, Codex CLI, Cursor, and any MCP-compatible client.
+
+**Claude Code**
 
 ```bash
-claude mcp add --transport http ecma-spec https://api.ooxml.dev/mcp
+claude mcp add --transport http ooxml https://api.ooxml.dev/mcp
 ```
 
-Works with Claude Code, Cursor, and any MCP-compatible client. Two flavors of tools share one server:
+**Codex CLI**
 
-- **Semantic** (over the spec PDF): `search_ecma_spec`, `get_section`, `list_parts`
-- **Structural** (over the parsed XSDs): `ooxml_lookup_element`, `ooxml_lookup_type`, `ooxml_children`, `ooxml_attributes`, `ooxml_enum`, `ooxml_namespace_info`
+```bash
+codex mcp add ooxml --url https://api.ooxml.dev/mcp
+```
+
+Or in `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.ooxml]
+url = "https://api.ooxml.dev/mcp"
+```
+
+**Cursor** — add to your MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "ooxml": { "url": "https://api.ooxml.dev/mcp" }
+  }
+}
+```
+
+Two tool families share one server:
+
+- **Prose search** (over the spec PDFs): `ooxml_search`, `ooxml_section`, `ooxml_parts`
+- **Schema lookup** (over the parsed XSDs): `ooxml_element`, `ooxml_type`, `ooxml_children`, `ooxml_attributes`, `ooxml_enum`, `ooxml_namespace`
 
 ## Development
 

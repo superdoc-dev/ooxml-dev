@@ -124,16 +124,25 @@ ${navHtml()}
 
 function mcpPageHtml(): string {
 	return `<main>
-<h1>Search the ECMA-376 spec with AI</h1>
-<p>Connect your MCP-compatible client to search 18,000+ specification chunks using natural language queries.</p>
-<h2>Available Tools</h2>
+<h1>OOXML reference for AI assistants</h1>
+<p>Connect your MCP-compatible client and get both natural-language search across the ECMA-376 spec and deterministic schema lookup over the parsed XSDs.</p>
+<h2>Prose search</h2>
 <ul>
-<li><strong>search_ecma_spec</strong> — Semantic search across the specification.</li>
-<li><strong>get_section</strong> — Retrieve a specific section by ID.</li>
-<li><strong>list_parts</strong> — Browse the specification structure.</li>
+<li><strong>ooxml_search</strong> — Semantic search across 18,000+ spec chunks.</li>
+<li><strong>ooxml_section</strong> — Retrieve a specific section by ID.</li>
+<li><strong>ooxml_parts</strong> — Browse the specification structure.</li>
+</ul>
+<h2>Schema lookup</h2>
+<ul>
+<li><strong>ooxml_element</strong> — Canonical info for an element by qname.</li>
+<li><strong>ooxml_type</strong> — Canonical info for a complexType or simpleType.</li>
+<li><strong>ooxml_children</strong> — Legal children of an element, type, or group.</li>
+<li><strong>ooxml_attributes</strong> — Attributes including inherited + attributeGroup refs.</li>
+<li><strong>ooxml_enum</strong> — Enumeration values for a simpleType.</li>
+<li><strong>ooxml_namespace</strong> — What's known about a namespace URI.</li>
 </ul>
 <h2>What is MCP?</h2>
-<p>The Model Context Protocol (MCP) is an open standard that lets AI assistants connect to external data sources and tools.</p>
+<p>The Model Context Protocol (MCP) is an open standard that lets AI assistants connect to external data sources and tools. Works with Claude Code, Codex CLI, Cursor, and any MCP-compatible client.</p>
 ${navHtml()}
 </main>`;
 }

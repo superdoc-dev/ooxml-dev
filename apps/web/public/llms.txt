@@ -33,11 +33,19 @@ Every page combines XML structure, live rendered previews, and implementation no
 
 ## MCP Server
 
-Search the ECMA-376 spec with AI. 18,000+ spec chunks, searchable by meaning.
+OOXML reference for AI assistants. Two tool families: prose search across 18,000+ ECMA-376 spec chunks, and deterministic schema lookup over the parsed XSDs.
 
-- `search_ecma_spec`: Semantic search — ask questions in natural language
-- `get_section`: Retrieve a specific section by ID (e.g., "17.3.2")
-- `list_parts`: Browse the specification structure by part (1-4)
+Prose search (over the spec PDFs):
+- `ooxml_search`: Semantic search — ask questions in natural language
+- `ooxml_section`: Retrieve a specific section by ID (e.g., "17.3.2")
+- `ooxml_parts`: Browse the specification structure by part (1-4)
+
+Schema lookup (over the parsed XSDs):
+- `ooxml_element` / `ooxml_type`: Canonical symbol info by qname
+- `ooxml_children`: Legal children of an element, type, or group
+- `ooxml_attributes`: Attributes including inherited + attributeGroup refs
+- `ooxml_enum`: Enumeration values for a simpleType
+- `ooxml_namespace`: Vocabularies and symbol counts for a namespace URI
 
 ## About
 

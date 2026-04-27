@@ -35,13 +35,13 @@ export function Home() {
 						NEW
 					</span>
 					<span className="text-[var(--color-text-secondary)]">
-						Bidirectional Text — RTL layout, logical alignment, tab stop flipping, and bidi pitfalls
+						OOXML MCP — deterministic schema lookup for elements, attributes, types, enums
 					</span>
 					<Link
-						to="/docs/bidirectional-text/"
+						to="/mcp"
 						className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-medium text-xs"
 					>
-						Read it →
+						Connect →
 					</Link>
 				</div>
 			</main>

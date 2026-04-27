@@ -285,7 +285,7 @@ test("local element symbols are scoped per-owner (no cross-CT collapse)", async 
 
 test("xsd-builtin symbols have profile membership (lookupSymbolByTypeRef can follow xsd:string)", async () => {
 	// Built-ins like xsd:string are auto-created during inheritance resolution and
-	// must be linked to xsd_symbol_profiles, otherwise ooxml_lookup_type for
+	// must be linked to xsd_symbol_profiles, otherwise ooxml_type for
 	// 'xsd:string' and lookupSymbolByTypeRef for {...XMLSchema}string return null.
 	const t = await lookupSymbolByTypeRef(
 		db.sql,

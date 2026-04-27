@@ -257,7 +257,7 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 					baseId = id;
 					if (inserted) stats.symbolsInserted++;
 					else stats.symbolsExisting++;
-					// Link to a profile so ooxml_lookup_type / lookupSymbolByTypeRef can
+					// Link to a profile so ooxml_type / lookupSymbolByTypeRef can
 					// follow type_refs into the W3C XSD namespace.
 					let xsdNsId = namespaceIds.get(baseQ.namespace);
 					if (xsdNsId == null) {
@@ -588,7 +588,7 @@ async function handleElement(
 		}
 		childSymbolId = id;
 	} else if (a.name) {
-		// Resolve @type so ooxml_lookup_element / ooxml_children can follow it.
+		// Resolve @type so ooxml_element / ooxml_children can follow it.
 		let typeRef: string | null = null;
 		if (a.type) {
 			const r = resolveQNameAttr(a.type, ctx.prefixMap, ctx.ownerDecl.namespace);
@@ -616,7 +616,7 @@ async function handleElement(
 				ctx.stats.symbolsExisting++;
 			}
 			// Local elements need profile membership too, otherwise
-			// ooxml_lookup_element won't find them in the transitional profile.
+			// ooxml_element won't find them in the transitional profile.
 			// Queue for the post-pass batched flush.
 			const nsId = ctx.namespaceIds.get(ctx.ownerDecl.namespace);
 			if (nsId != null) {

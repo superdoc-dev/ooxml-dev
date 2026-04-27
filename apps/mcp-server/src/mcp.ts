@@ -37,10 +37,22 @@ const PART_DESCRIPTIONS: Record<number, string> = {
 	4: "Transitional Migration Features",
 };
 
+/** Shape of an MCP tool definition. Shared with OOXML_TOOL_DEFS so a future
+ * field added to one (annotations, outputSchema, etc.) widens both arrays. */
+export interface ToolDef {
+	name: string;
+	description: string;
+	inputSchema: {
+		type: "object";
+		properties: Record<string, unknown>;
+		required?: string[];
+	};
+}
+
 // Tool definitions
-const TOOLS = [
+export const TOOLS: ToolDef[] = [
 	{
-		name: "search_ecma_spec",
+		name: "ooxml_search",
 		description:
 			"Semantic search across the ECMA-376 (Office Open XML) specification. Returns relevant sections based on natural language queries about WordprocessingML, SpreadsheetML, PresentationML, and more.",
 		inputSchema: {
@@ -61,7 +73,7 @@ const TOOLS = [
 		},
 	},
 	{
-		name: "get_section",
+		name: "ooxml_section",
 		description:
 			"Get a specific section of the ECMA-376 specification by section ID (e.g., '17.3.2' for paragraph properties).",
 		inputSchema: {
@@ -77,7 +89,7 @@ const TOOLS = [
 		},
 	},
 	{
-		name: "list_parts",
+		name: "ooxml_parts",
 		description: "List ECMA-376 specification parts and their top-level sections.",
 		inputSchema: {
 			type: "object" as const,
@@ -124,11 +136,11 @@ function handleInitialize(id: number | string | null): JsonRpcResponse {
 				tools: {},
 			},
 			serverInfo: {
-				name: "ecma-spec",
+				name: "ooxml",
 				version: "0.1.0",
 			},
 			instructions:
-				"ECMA-376 (Office Open XML) specification search server. Use search_ecma_spec for semantic search, get_section for specific sections, or list_parts to browse the spec structure.",
+				"OOXML (ECMA-376 / Office Open XML) reference server. Two tool families: prose search over the spec PDFs (ooxml_search, ooxml_section, ooxml_parts) and deterministic schema lookup over the parsed XSDs (ooxml_element, ooxml_type, ooxml_children, ooxml_attributes, ooxml_enum, ooxml_namespace).",
 		},
 	};
 }
@@ -173,7 +185,7 @@ async function handleToolsCall(
 		}
 
 		switch (name) {
-			case "search_ecma_spec": {
+			case "ooxml_search": {
 				const query = args?.query as string;
 				const part = args?.part as number | undefined;
 				const limit = Math.min((args?.limit as number) || 5, 20);
@@ -194,7 +206,7 @@ async function handleToolsCall(
 				break;
 			}
 
-			case "get_section": {
+			case "ooxml_section": {
 				const sectionId = args?.section_id as string;
 				const part = args?.part as number | undefined;
 
@@ -213,7 +225,7 @@ async function handleToolsCall(
 				break;
 			}
 
-			case "list_parts": {
+			case "ooxml_parts": {
 				const part = args?.part as number | undefined;
 
 				const db = createDb(env.DATABASE_URL);

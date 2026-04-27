@@ -5,32 +5,66 @@ import { getSeoMeta } from "../data/seo";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const MCP_ENDPOINT = `${import.meta.env.VITE_API_URL}/mcp`;
-const CLAUDE_COMMAND = `claude mcp add --transport http ecma-spec ${MCP_ENDPOINT}`;
+const CLAUDE_COMMAND = `claude mcp add --transport http ooxml ${MCP_ENDPOINT}`;
+const CODEX_COMMAND = `codex mcp add ooxml --url ${MCP_ENDPOINT}`;
+const CODEX_TOML = `[mcp_servers.ooxml]
+url = "${MCP_ENDPOINT}"`;
 
-const TOOLS = [
+const PROSE_TOOLS = [
 	{
-		name: "search_ecma_spec",
+		name: "ooxml_search",
 		description:
-			'Semantic search across the specification. Ask questions like "How do paragraph borders work?" or "What controls table cell margins?"',
+			'Semantic search across the spec PDFs. Ask questions like "How do paragraph borders work?" or "What controls table cell margins?"',
 	},
 	{
-		name: "get_section",
+		name: "ooxml_section",
 		description: 'Retrieve a specific section by ID (e.g., "17.3.2" for paragraph properties).',
 	},
 	{
-		name: "list_parts",
+		name: "ooxml_parts",
 		description: "Browse the specification structure. Filter by part (1-4) to explore sections.",
+	},
+];
+
+const SCHEMA_TOOLS = [
+	{
+		name: "ooxml_element",
+		description:
+			"Look up an OOXML element by qname. Returns vocabulary, namespace, declared @type, and source.",
+	},
+	{
+		name: "ooxml_type",
+		description:
+			"Look up a complexType or simpleType by qname. Tries complexType first, then simpleType.",
+	},
+	{
+		name: "ooxml_children",
+		description:
+			"List the legal children of an element, complexType, or group in document order. Walks inheritance to union content from base types.",
+	},
+	{
+		name: "ooxml_attributes",
+		description:
+			"List the attributes of an element or complexType. Walks inheritance and unfolds attributeGroup refs recursively.",
+	},
+	{
+		name: "ooxml_enum",
+		description: "List enumeration values for a simpleType, in declaration order.",
+	},
+	{
+		name: "ooxml_namespace",
+		description: "Show what's known about a namespace URI: vocabularies, profiles, symbol counts.",
 	},
 ];
 
 const EXAMPLE_QUERIES = [
 	"How do I add borders to a table cell?",
-	"What's the difference between w:pPr and w:rPr?",
 	"How does numbering work in WordprocessingML?",
-	"Explain the content model for w:document",
+	"What are the legal children of w:CT_Tbl?",
+	"List all attributes of w:CT_R, including inherited ones.",
 ];
 
-type TabId = "claude" | "cursor" | "other";
+type TabId = "claude" | "codex" | "cursor" | "other";
 
 export function Mcp() {
 	useDocumentTitle(getSeoMeta("/mcp").title);
@@ -60,10 +94,10 @@ export function Mcp() {
 					<div className="inline-flex items-center gap-2 bg-[var(--color-accent)]/10 text-[var(--color-accent)] px-3 py-1 rounded-full text-sm font-medium mb-4">
 						<span>⚡</span> MCP Server
 					</div>
-					<h1 className="text-3xl font-bold mb-4">Search the ECMA-376 spec with AI</h1>
+					<h1 className="text-3xl font-bold mb-4">OOXML reference for AI assistants</h1>
 					<p className="text-[var(--color-text-secondary)] max-w-xl mx-auto">
-						18,000+ spec chunks, searchable by meaning. Ask questions in natural language, get the
-						relevant sections back.
+						Two tool families: prose search across 18,000+ spec chunks, and deterministic schema
+						lookup over the parsed XSDs. Ask in natural language, or query the structure directly.
 					</p>
 				</div>
 
@@ -91,6 +125,9 @@ export function Mcp() {
 						<div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
 							<TabButton active={activeTab === "claude"} onClick={() => setActiveTab("claude")}>
 								Claude Code
+							</TabButton>
+							<TabButton active={activeTab === "codex"} onClick={() => setActiveTab("codex")}>
+								Codex CLI
 							</TabButton>
 							<TabButton active={activeTab === "cursor"} onClick={() => setActiveTab("cursor")}>
 								Cursor
@@ -123,6 +160,26 @@ export function Mcp() {
 									</p>
 								</>
 							)}
+							{activeTab === "codex" && (
+								<>
+									<p className="text-sm text-[var(--color-text-secondary)] mb-3">
+										Run this command in your terminal:
+									</p>
+									<div className="flex items-center gap-2 bg-[var(--color-bg-code)] rounded-lg px-4 py-3 mb-3">
+										<code className="text-[var(--color-syntax-value)] font-mono text-sm flex-1">
+											{CODEX_COMMAND}
+										</code>
+									</div>
+									<p className="text-sm text-[var(--color-text-secondary)] mb-3">
+										Or add this entry to <code>~/.codex/config.toml</code>:
+									</p>
+									<div className="bg-[var(--color-bg-code)] rounded-lg px-4 py-3">
+										<pre className="text-[var(--color-syntax-value)] font-mono text-sm overflow-x-auto">
+											{CODEX_TOML}
+										</pre>
+									</div>
+								</>
+							)}
 							{activeTab === "cursor" && (
 								<>
 									<p className="text-sm text-[var(--color-text-secondary)] mb-3">
@@ -133,7 +190,7 @@ export function Mcp() {
 											{JSON.stringify(
 												{
 													mcpServers: {
-														"ecma-spec": {
+														ooxml: {
 															url: MCP_ENDPOINT,
 														},
 													},
@@ -165,11 +222,34 @@ export function Mcp() {
 					</div>
 				</div>
 
-				{/* Available Tools */}
+				{/* Prose search tools */}
 				<div className="mb-10">
-					<h2 className="font-semibold mb-4">Available Tools</h2>
+					<h2 className="font-semibold mb-2">Prose search</h2>
+					<p className="text-sm text-[var(--color-text-secondary)] mb-4">
+						Natural-language search over the ECMA-376 spec PDFs.
+					</p>
 					<div className="space-y-3">
-						{TOOLS.map((tool) => (
+						{PROSE_TOOLS.map((tool) => (
+							<div key={tool.name} className="border border-[var(--color-border)] rounded-lg p-4">
+								<div className="flex items-start gap-3">
+									<code className="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] px-2 py-1 rounded text-sm font-mono shrink-0">
+										{tool.name}
+									</code>
+									<p className="text-sm text-[var(--color-text-secondary)]">{tool.description}</p>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+
+				{/* Schema lookup tools */}
+				<div className="mb-10">
+					<h2 className="font-semibold mb-2">Schema lookup</h2>
+					<p className="text-sm text-[var(--color-text-secondary)] mb-4">
+						Deterministic queries over the parsed XSD graph.
+					</p>
+					<div className="space-y-3">
+						{SCHEMA_TOOLS.map((tool) => (
 							<div key={tool.name} className="border border-[var(--color-border)] rounded-lg p-4">
 								<div className="flex items-start gap-3">
 									<code className="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] px-2 py-1 rounded text-sm font-mono shrink-0">
@@ -215,9 +295,9 @@ export function Mcp() {
 						tools.
 					</p>
 					<p className="text-sm text-[var(--color-text-secondary)]">
-						By connecting to this MCP server, your AI assistant gains the ability to search and
-						retrieve information from the ECMA-376 specification—making it much easier to work with
-						Office Open XML.
+						By connecting to this MCP server, your AI assistant gains both prose search across the
+						ECMA-376 specification and deterministic schema lookup over the parsed XSDs—making it
+						much easier to work with Office Open XML.
 					</p>
 				</div>
 			</main>

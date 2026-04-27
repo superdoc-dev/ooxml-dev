@@ -2,14 +2,15 @@
  * Read-only structural MCP tools backed by the OOXML schema graph.
  *
  * Tools:
- *   ooxml_lookup_element, ooxml_lookup_type, ooxml_children,
- *   ooxml_attributes, ooxml_enum, ooxml_namespace_info.
+ *   ooxml_element, ooxml_type, ooxml_children,
+ *   ooxml_attributes, ooxml_enum, ooxml_namespace.
  *
  * Default profile is `transitional`. Future profiles (e.g. word-compatible-docx)
  * will compose Transitional with Office extension schemas.
  */
 
 import { neon } from "@neondatabase/serverless";
+import type { ToolDef } from "./mcp";
 import {
 	type AttrEntry,
 	type ChildEdge,
@@ -33,9 +34,9 @@ export interface OoxmlEnv {
 	DATABASE_URL: string;
 }
 
-export const OOXML_TOOL_DEFS = [
+export const OOXML_TOOL_DEFS: ToolDef[] = [
 	{
-		name: "ooxml_lookup_element",
+		name: "ooxml_element",
 		description:
 			"Look up an OOXML element by qname in a profile. Returns canonical symbol info (vocabulary, namespace, declared @type, profile membership, source). Accepts 'w:tbl', '{namespace}localName' (Clark form), or bare 'localName' (defaults to wml-main).",
 		inputSchema: {
@@ -51,7 +52,7 @@ export const OOXML_TOOL_DEFS = [
 		},
 	},
 	{
-		name: "ooxml_lookup_type",
+		name: "ooxml_type",
 		description:
 			"Look up a complexType or simpleType by qname in a profile. Tries complexType first, then simpleType.",
 		inputSchema: {
@@ -107,7 +108,7 @@ export const OOXML_TOOL_DEFS = [
 		},
 	},
 	{
-		name: "ooxml_namespace_info",
+		name: "ooxml_namespace",
 		description:
 			"Show what's known about a namespace URI: vocabularies, profiles that include it, and how many symbols each profile contributes.",
 		inputSchema: {
@@ -121,12 +122,12 @@ export const OOXML_TOOL_DEFS = [
 ];
 
 export type OoxmlToolName =
-	| "ooxml_lookup_element"
-	| "ooxml_lookup_type"
+	| "ooxml_element"
+	| "ooxml_type"
 	| "ooxml_children"
 	| "ooxml_attributes"
 	| "ooxml_enum"
-	| "ooxml_namespace_info";
+	| "ooxml_namespace";
 
 const OOXML_TOOL_NAMES: ReadonlySet<string> = new Set(OOXML_TOOL_DEFS.map((t) => t.name));
 
@@ -164,7 +165,7 @@ export async function runOoxmlTool(
 	const profile = (args.profile as string | undefined) ?? DEFAULT_PROFILE;
 
 	switch (name) {
-		case "ooxml_lookup_element": {
+		case "ooxml_element": {
 			const q = parseQName(String(args.qname ?? ""));
 			if (!q.ok) return formatNotFound(`could not parse qname: ${q.reason}`);
 			const hit = await lookupElement(sql, q.qname.namespace, q.qname.localName, profile);
@@ -177,7 +178,7 @@ export async function runOoxmlTool(
 			return formatSymbolReport("Element", hit, profile);
 		}
 
-		case "ooxml_lookup_type": {
+		case "ooxml_type": {
 			const q = parseQName(String(args.qname ?? ""));
 			if (!q.ok) return formatNotFound(`could not parse qname: ${q.reason}`);
 			const hit = await lookupType(sql, q.qname.namespace, q.qname.localName, profile);
@@ -255,7 +256,7 @@ export async function runOoxmlTool(
 			return formatEnumReport(sym, enums, profile);
 		}
 
-		case "ooxml_namespace_info": {
+		case "ooxml_namespace": {
 			const uri = String(args.uri ?? "");
 			if (!uri) return formatNotFound("namespace URI not provided");
 			const info = await getNamespaceInfo(sql, uri);

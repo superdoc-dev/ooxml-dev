@@ -431,7 +431,7 @@ test("ingest preserves element/attribute @type, local-element profile membership
 	);
 
 	// Local element: <xsd:element name="text" type="xsd:string"/> inside CT_Para.
-	// Should have type_ref AND profile membership so ooxml_lookup_element finds it.
+	// Should have type_ref AND profile membership so ooxml_element finds it.
 	const [textSym] = await db.sql`
 		SELECT s.id, s.type_ref FROM xsd_symbols s
 		WHERE s.local_name = 'text' AND s.kind = 'element' AND s.vocabulary_id = 'wml-main'

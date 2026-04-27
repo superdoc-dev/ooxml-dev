@@ -1,7 +1,7 @@
 # PDF ingest (ECMA-376 prose corpus)
 
-Builds the semantic-search corpus that powers `search_ecma_spec` /
-`get_section` / `list_parts`. Each ECMA-376 part PDF is extracted into
+Builds the prose-search corpus that powers `ooxml_search` /
+`ooxml_section` / `ooxml_parts`. Each ECMA-376 part PDF is extracted into
 section-aware markdown, chunked at ~6 KB boundaries, embedded with the
 configured provider, and uploaded into `spec_content`.
 

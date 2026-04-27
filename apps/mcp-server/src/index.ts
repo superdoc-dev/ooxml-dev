@@ -1,17 +1,16 @@
 /**
- * ECMA-376 Spec MCP Server
+ * OOXML Reference MCP Server
  *
- * Cloudflare Worker that exposes ECMA-376 specification search via MCP protocol.
- *
- * Tools:
- * - search_ecma_spec: Semantic search across the spec
- * - get_section: Get specific section by ID
- * - list_parts: List spec parts and sections
+ * Cloudflare Worker exposing two tool families over MCP:
+ *   - prose search    over ECMA-376 PDFs (ooxml_search, ooxml_section, ooxml_parts)
+ *   - schema lookup   over the parsed XSD graph (ooxml_element, ooxml_type,
+ *                     ooxml_children, ooxml_attributes, ooxml_enum, ooxml_namespace)
  */
 
 import { createDb } from "./db";
 import { embedQuery } from "./embeddings";
-import { handleMcpRequest } from "./mcp";
+import { handleMcpRequest, TOOLS } from "./mcp";
+import { OOXML_TOOL_DEFS } from "./ooxml-tools";
 
 export interface Env {
 	DATABASE_URL: string;
@@ -169,7 +168,7 @@ export default {
 		return addCorsHeaders(
 			new Response(
 				JSON.stringify({
-					name: "ECMA-376 Spec MCP Server",
+					name: "OOXML Reference MCP Server",
 					version: "0.1.0",
 					endpoints: {
 						mcp: "/mcp",
@@ -188,50 +187,15 @@ export default {
 	},
 };
 
-// MCP info endpoint (GET for debugging)
+// MCP info endpoint (GET for debugging). Tool list is derived from the same
+// canonical exports as the JSON-RPC tools/list response so they can't drift.
 function handleMcpInfo(): Response {
 	return new Response(
 		JSON.stringify({
-			name: "ecma-spec",
+			name: "ooxml",
 			version: "0.1.0",
-			description: "ECMA-376 (Office Open XML) specification search server",
-			tools: [
-				{
-					name: "search_ecma_spec",
-					description: "Search the ECMA-376 specification semantically",
-					inputSchema: {
-						type: "object",
-						properties: {
-							query: { type: "string", description: "Natural language search query" },
-							part: { type: "number", description: "Filter by part number (1-4)" },
-							limit: { type: "number", description: "Max results (default: 5)" },
-						},
-						required: ["query"],
-					},
-				},
-				{
-					name: "get_section",
-					description: "Get a specific section by ID",
-					inputSchema: {
-						type: "object",
-						properties: {
-							section_id: { type: "string", description: "Section ID (e.g., '17.3.2')" },
-							part: { type: "number", description: "Part number (1-4)" },
-						},
-						required: ["section_id"],
-					},
-				},
-				{
-					name: "list_parts",
-					description: "List spec parts and sections",
-					inputSchema: {
-						type: "object",
-						properties: {
-							part: { type: "number", description: "Filter by part number (1-4)" },
-						},
-					},
-				},
-			],
+			description: "OOXML (ECMA-376) reference server: prose search + schema lookup",
+			tools: [...TOOLS, ...OOXML_TOOL_DEFS],
 		}),
 		{
 			headers: { "Content-Type": "application/json" },
