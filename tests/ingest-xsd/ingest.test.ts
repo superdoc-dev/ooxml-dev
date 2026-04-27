@@ -186,6 +186,115 @@ test("ingest is idempotent: re-running adds no new symbols/edges", async () => {
 	expect(c3.c).toBe(first.inheritanceEdgesInserted);
 });
 
+test("ingest writes compositors and child edges for nested content models", async () => {
+	const stats = await ingestSchemaSet({
+		schemaDir: FIXTURES_DIR,
+		entrypoints: ["main.xsd"],
+		profileName: "transitional",
+		sourceName: "ecma-376-transitional",
+		db,
+	});
+
+	// Fixture content models:
+	//   CT_Para:       sequence -> element name="text"
+	//   CT_Body:       sequence -> [ element ref="document",
+	//                                choice (minOccurs=0, maxOccurs=unbounded) -> [
+	//                                  group ref="EG_PContent",
+	//                                  element name="break"
+	//                                ]]
+	//   EG_PContent:   choice -> element name="r"
+	// Compositors total: CT_Para(1) + CT_Body(2) + EG_PContent(1) = 4
+	expect(stats.compositorsInserted).toBe(4);
+	expect(stats.groupRefsInserted).toBe(1);
+	expect(stats.localElementsCreated).toBe(3); // text, break, r
+	expect(stats.childEdgesUnresolved).toBe(0);
+	expect(stats.groupRefsUnresolved).toBe(0);
+
+	// CT_Para: one sequence with one child edge to local element "text".
+	const ctParaChildren = await db.sql`
+		SELECT s.local_name, e.min_occurs, e.max_occurs, e.order_index, c.kind AS compositor_kind
+		FROM xsd_child_edges e
+		JOIN xsd_symbols s ON s.id = e.child_symbol_id
+		JOIN xsd_compositors c ON c.id = e.compositor_id
+		JOIN xsd_symbols parent ON parent.id = e.parent_symbol_id
+		WHERE parent.local_name = 'CT_Para' AND parent.kind = 'complexType'
+		ORDER BY e.order_index
+	`;
+	expect(ctParaChildren).toHaveLength(1);
+	expect(ctParaChildren[0]).toMatchObject({
+		local_name: "text",
+		min_occurs: 1,
+		max_occurs: 1,
+		order_index: 0,
+		compositor_kind: "sequence",
+	});
+
+	// CT_Body: top sequence + nested choice. Two compositors for CT_Body.
+	const ctBodyCompositors = await db.sql`
+		SELECT c.kind, c.parent_symbol_id, c.parent_compositor_id, c.min_occurs, c.max_occurs, c.order_index
+		FROM xsd_compositors c
+		JOIN xsd_symbols s ON s.id = c.parent_symbol_id
+		WHERE s.local_name = 'CT_Body' AND s.kind = 'complexType'
+		ORDER BY c.order_index
+	`;
+	// Only the TOP-level compositor has parent_symbol_id set; nested has parent_compositor_id.
+	expect(ctBodyCompositors).toHaveLength(1);
+	expect(ctBodyCompositors[0]).toMatchObject({ kind: "sequence", min_occurs: 1, max_occurs: 1 });
+	const topId: number = ctBodyCompositors[0].id ?? null;
+	void topId;
+
+	const nestedCompositors = await db.sql`
+		SELECT c.kind, c.min_occurs, c.max_occurs, c.parent_compositor_id
+		FROM xsd_compositors c
+		JOIN xsd_compositors parent ON parent.id = c.parent_compositor_id
+		JOIN xsd_symbols owner ON owner.id = parent.parent_symbol_id
+		WHERE owner.local_name = 'CT_Body'
+	`;
+	expect(nestedCompositors).toHaveLength(1);
+	expect(nestedCompositors[0]).toMatchObject({
+		kind: "choice",
+		min_occurs: 0,
+		max_occurs: null, // unbounded
+	});
+
+	// CT_Body's top sequence has 1 child edge (ref="document"). The break element is
+	// inside the nested choice, not the top sequence.
+	const ctBodyTopChildren = await db.sql`
+		SELECT s.local_name, e.order_index
+		FROM xsd_child_edges e
+		JOIN xsd_symbols s ON s.id = e.child_symbol_id
+		JOIN xsd_compositors c ON c.id = e.compositor_id
+		JOIN xsd_symbols parent ON parent.id = c.parent_symbol_id
+		WHERE parent.local_name = 'CT_Body' AND c.kind = 'sequence'
+		ORDER BY e.order_index
+	`;
+	expect(ctBodyTopChildren).toHaveLength(1);
+	expect(ctBodyTopChildren[0].local_name).toBe("document");
+
+	// CT_Body's nested choice has 1 child edge (local element "break"); the group ref
+	// goes to xsd_group_edges, not child_edges.
+	const ctBodyNestedChildren = await db.sql`
+		SELECT s.local_name
+		FROM xsd_child_edges e
+		JOIN xsd_symbols s ON s.id = e.child_symbol_id
+		JOIN xsd_compositors c ON c.id = e.compositor_id
+		WHERE c.kind = 'choice' AND c.parent_compositor_id IS NOT NULL
+	`;
+	const names = ctBodyNestedChildren.map((r: { local_name: string }) => r.local_name);
+	expect(names).toContain("break");
+
+	// Group ref for EG_PContent under CT_Body.
+	const groupEdges = await db.sql`
+		SELECT g.local_name AS group_name, ref_kind
+		FROM xsd_group_edges ge
+		JOIN xsd_symbols parent ON parent.id = ge.parent_symbol_id
+		JOIN xsd_symbols g ON g.id = ge.group_symbol_id
+		WHERE parent.local_name = 'CT_Body'
+	`;
+	expect(groupEdges).toHaveLength(1);
+	expect(groupEdges[0]).toMatchObject({ group_name: "EG_PContent", ref_kind: "group" });
+});
+
 test.skipIf(!realCacheReady)(
 	"smoke: ingest WML closure into the dev DB and verify counts",
 	async () => {
@@ -197,12 +306,24 @@ test.skipIf(!realCacheReady)(
 			db,
 		});
 
-		// Real WML closure has 12 documents (wml + closure).
+		// Real WML closure has 12 documents.
 		expect(stats.documents).toBe(12);
-		// At least the parser-level totals should land as symbols.
-		// Real counts: 820 CT, 47 elem, 389 ST, 67 grp, 8 attrGrp, 14 attr = 1345 (+ a few xsd-builtins).
 		expect(stats.symbolsInserted).toBeGreaterThan(1300);
-		// Most types have an explicit base (extension or restriction); expect many edges.
 		expect(stats.inheritanceEdgesInserted).toBeGreaterThan(300);
+		expect(stats.compositorsInserted).toBeGreaterThan(500);
+		expect(stats.childEdgesInserted).toBeGreaterThan(1000);
+		expect(stats.groupRefsInserted).toBeGreaterThan(20);
+		expect(stats.childEdgesUnresolved).toBe(0);
+		expect(stats.groupRefsUnresolved).toBe(0);
+
+		// w:tbl is the global element; its content type is CT_Tbl. Verify CT_Tbl has children.
+		const ctTblChildren = await db.sql`
+			SELECT s.local_name FROM xsd_child_edges e
+			JOIN xsd_symbols s ON s.id = e.child_symbol_id
+			JOIN xsd_symbols parent ON parent.id = e.parent_symbol_id
+			WHERE parent.local_name = 'CT_Tbl' AND parent.vocabulary_id = 'wml-main'
+			ORDER BY e.order_index
+		`;
+		expect(ctTblChildren.length).toBeGreaterThan(0);
 	},
 );

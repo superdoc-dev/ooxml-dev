@@ -24,6 +24,15 @@
       <xsd:restriction base="CT_Para"/>
     </xsd:complexContent>
   </xsd:complexType>
+  <xsd:complexType name="CT_Body">
+    <xsd:sequence>
+      <xsd:element ref="document"/>
+      <xsd:choice minOccurs="0" maxOccurs="unbounded">
+        <xsd:group ref="EG_PContent"/>
+        <xsd:element name="break" type="xsd:string"/>
+      </xsd:choice>
+    </xsd:sequence>
+  </xsd:complexType>
   <xsd:simpleType name="ST_Jc">
     <xsd:restriction base="xsd:string">
       <xsd:enumeration value="left"/>

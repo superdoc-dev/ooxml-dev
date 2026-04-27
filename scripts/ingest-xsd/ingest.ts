@@ -33,11 +33,7 @@ import { createDbClient, type DbClient } from "../../packages/shared/src/db/inde
 import { nodeAttrs } from "./ast.ts";
 import { parseSchemaSet } from "./parse-schema.ts";
 import { resolveQNameAttr } from "./qname.ts";
-import type {
-	Declaration,
-	ParsedSchemaSet,
-	PreserveOrderNode,
-} from "./types.ts";
+import type { Declaration, ParsedSchemaSet, PreserveOrderNode } from "./types.ts";
 import { vocabularyForNamespace } from "./vocabulary.ts";
 
 // biome-ignore lint/suspicious/noExplicitAny: postgres library typing is intricate; helpers stay generic.
@@ -62,6 +58,12 @@ export interface IngestStats {
 	profileMembershipsInserted: number;
 	inheritanceEdgesInserted: number;
 	inheritanceUnresolved: number;
+	compositorsInserted: number;
+	childEdgesInserted: number;
+	childEdgesUnresolved: number;
+	groupRefsInserted: number;
+	groupRefsUnresolved: number;
+	localElementsCreated: number;
 }
 
 export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<IngestStats> {
@@ -78,6 +80,12 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 		profileMembershipsInserted: 0,
 		inheritanceEdgesInserted: 0,
 		inheritanceUnresolved: 0,
+		compositorsInserted: 0,
+		childEdgesInserted: 0,
+		childEdgesUnresolved: 0,
+		groupRefsInserted: 0,
+		groupRefsUnresolved: 0,
+		localElementsCreated: 0,
 	};
 
 	await opts.db.sql.begin(async (sql: Sql) => {
@@ -182,9 +190,229 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 				if (inserted) stats.inheritanceEdgesInserted++;
 			}
 		}
+
+		// Pass 3: content models. Walk every complexType and group declaration,
+		// emit xsd_compositors / xsd_child_edges / xsd_group_edges. Local element
+		// declarations are deduped under (owner-vocab, name, element); cross-CT
+		// reuse of a local name collapses to one symbol.
+		for (const decls of parseResult.declarationsByQName.values()) {
+			for (const decl of decls) {
+				if (decl.kind !== "complexType" && decl.kind !== "group") continue;
+
+				const ownerSymbolId = symbolIds.get(
+					symbolKey(decl.vocabularyId, decl.localName, decl.kind),
+				);
+				if (ownerSymbolId == null) continue;
+				const prefixMap = parseResult.namespaceByPrefix.get(decl.documentPath);
+				if (!prefixMap) continue;
+
+				const ctx: WalkCtx = {
+					sql,
+					profileId,
+					ownerSymbolId,
+					ownerDecl: decl,
+					prefixMap,
+					symbolIds,
+					stats,
+				};
+
+				const particleParents = findContentModelParents(decl);
+				let topOrder = 0;
+				for (const parent of particleParents) {
+					for (const child of nodeChildrenLocal(parent)) {
+						const tag = stripPrefixLocal(nodeTagLocal(child));
+						if (tag === "sequence" || tag === "choice" || tag === "all") {
+							await walkCompositor(child, tag, null, topOrder, ctx);
+							topOrder++;
+						} else if (tag === "group") {
+							await handleGroupRef(child, topOrder, ctx);
+							topOrder++;
+						}
+					}
+				}
+			}
+		}
 	});
 
 	return stats;
+}
+
+interface WalkCtx {
+	sql: Sql;
+	profileId: number;
+	ownerSymbolId: number;
+	ownerDecl: Declaration;
+	prefixMap: Map<string, string>;
+	symbolIds: Map<string, number>;
+	stats: IngestStats;
+}
+
+/**
+ * For a complexType: yield the node(s) whose direct children are particles
+ * (sequence/choice/all/group). That's the complexType itself, OR (for derived
+ * types) the inner xsd:extension or xsd:restriction beneath complexContent.
+ *
+ * For a group definition: yield the group node itself.
+ *
+ * simpleContent has no element particles; not yielded.
+ */
+function findContentModelParents(decl: Declaration): PreserveOrderNode[] {
+	if (decl.kind === "group") return [decl.node];
+
+	if (decl.kind !== "complexType") return [];
+
+	const out: PreserveOrderNode[] = [];
+	let sawComplexContent = false;
+	for (const child of nodeChildrenLocal(decl.node)) {
+		const tag = stripPrefixLocal(nodeTagLocal(child));
+		if (tag === "complexContent") {
+			sawComplexContent = true;
+			for (const inner of nodeChildrenLocal(child)) {
+				const innerTag = stripPrefixLocal(nodeTagLocal(inner));
+				if (innerTag === "extension" || innerTag === "restriction") out.push(inner);
+			}
+		}
+	}
+	if (sawComplexContent) return out;
+	// No complexContent wrapper: particles live directly under complexType.
+	return [decl.node];
+}
+
+async function walkCompositor(
+	node: PreserveOrderNode,
+	kind: "sequence" | "choice" | "all",
+	parentCompositorId: number | null,
+	orderIndex: number,
+	ctx: WalkCtx,
+): Promise<void> {
+	const a = nodeAttrs(node);
+	const compositorId = await insertCompositor(
+		ctx.sql,
+		parentCompositorId === null ? ctx.ownerSymbolId : null,
+		parentCompositorId,
+		ctx.profileId,
+		kind,
+		parseMinOccurs(a.minOccurs),
+		parseMaxOccurs(a.maxOccurs),
+		orderIndex,
+	);
+	ctx.stats.compositorsInserted++;
+
+	let childOrder = 0;
+	for (const child of nodeChildrenLocal(node)) {
+		const tag = stripPrefixLocal(nodeTagLocal(child));
+		if (tag === "element") {
+			await handleElement(child, compositorId, childOrder, ctx);
+			childOrder++;
+		} else if (tag === "sequence" || tag === "choice" || tag === "all") {
+			await walkCompositor(child, tag, compositorId, childOrder, ctx);
+			childOrder++;
+		} else if (tag === "group") {
+			await handleGroupRef(child, childOrder, ctx, compositorId);
+			childOrder++;
+		}
+		// xsd:any: skipped for now.
+	}
+}
+
+async function handleElement(
+	node: PreserveOrderNode,
+	compositorId: number,
+	orderIndex: number,
+	ctx: WalkCtx,
+): Promise<void> {
+	const a = nodeAttrs(node);
+	let childSymbolId: number | null = null;
+
+	if (a.ref) {
+		const resolved = resolveQNameAttr(a.ref, ctx.prefixMap, ctx.ownerDecl.namespace);
+		if (!resolved.resolved || !resolved.qname.vocabularyId) {
+			ctx.stats.childEdgesUnresolved++;
+			return;
+		}
+		const id = ctx.symbolIds.get(
+			symbolKey(resolved.qname.vocabularyId, resolved.qname.localName, "element"),
+		);
+		if (id == null) {
+			ctx.stats.childEdgesUnresolved++;
+			return;
+		}
+		childSymbolId = id;
+	} else if (a.name) {
+		const key = symbolKey(ctx.ownerDecl.vocabularyId, a.name, "element");
+		let id = ctx.symbolIds.get(key);
+		if (id == null) {
+			const res = await upsertSymbol(ctx.sql, ctx.ownerDecl.vocabularyId, a.name, "element");
+			ctx.symbolIds.set(key, res.id);
+			if (res.inserted) {
+				ctx.stats.symbolsInserted++;
+				ctx.stats.localElementsCreated++;
+			} else {
+				ctx.stats.symbolsExisting++;
+			}
+			id = res.id;
+		}
+		childSymbolId = id;
+	}
+
+	if (childSymbolId == null) return;
+
+	await insertChildEdge(
+		ctx.sql,
+		ctx.ownerSymbolId,
+		compositorId,
+		childSymbolId,
+		ctx.profileId,
+		parseMinOccurs(a.minOccurs),
+		parseMaxOccurs(a.maxOccurs),
+		orderIndex,
+	);
+	ctx.stats.childEdgesInserted++;
+}
+
+async function handleGroupRef(
+	node: PreserveOrderNode,
+	orderIndex: number,
+	ctx: WalkCtx,
+	_compositorId: number | null = null,
+): Promise<void> {
+	void _compositorId; // group_edges aren't compositor-scoped in our schema; refs hang off the parent symbol.
+	const a = nodeAttrs(node);
+	if (!a.ref) return;
+	const resolved = resolveQNameAttr(a.ref, ctx.prefixMap, ctx.ownerDecl.namespace);
+	if (!resolved.resolved || !resolved.qname.vocabularyId) {
+		ctx.stats.groupRefsUnresolved++;
+		return;
+	}
+	const groupSymbolId = ctx.symbolIds.get(
+		symbolKey(resolved.qname.vocabularyId, resolved.qname.localName, "group"),
+	);
+	if (groupSymbolId == null) {
+		ctx.stats.groupRefsUnresolved++;
+		return;
+	}
+	await insertGroupEdge(
+		ctx.sql,
+		ctx.ownerSymbolId,
+		groupSymbolId,
+		ctx.profileId,
+		"group",
+		orderIndex,
+	);
+	ctx.stats.groupRefsInserted++;
+}
+
+function parseMinOccurs(raw: string | undefined): number {
+	if (raw === undefined) return 1;
+	const n = parseInt(raw, 10);
+	return Number.isFinite(n) ? n : 1;
+}
+
+function parseMaxOccurs(raw: string | undefined): number | null {
+	if (raw === undefined) return 1;
+	if (raw === "unbounded") return null;
+	const n = parseInt(raw, 10);
+	return Number.isFinite(n) ? n : 1;
 }
 
 // --- DB helpers ----------------------------------------------------------
@@ -200,7 +428,10 @@ async function ensureProfile(sql: Sql, name: string): Promise<number> {
 
 async function lookupSourceId(sql: Sql, name: string): Promise<number> {
 	const [row] = await sql`SELECT id FROM reference_sources WHERE name = ${name} LIMIT 1`;
-	if (!row) throw new Error(`reference_sources row not found for name='${name}'. Run db:sync-sources first.`);
+	if (!row)
+		throw new Error(
+			`reference_sources row not found for name='${name}'. Run db:sync-sources first.`,
+		);
 	return row.id;
 }
 
@@ -258,6 +489,60 @@ async function insertInheritance(
 		RETURNING id
 	`;
 	return rows.length > 0;
+}
+
+async function insertCompositor(
+	sql: Sql,
+	parentSymbolId: number | null,
+	parentCompositorId: number | null,
+	profileId: number,
+	kind: "sequence" | "choice" | "all",
+	minOccurs: number,
+	maxOccurs: number | null,
+	orderIndex: number,
+): Promise<number> {
+	const [row] = await sql`
+		INSERT INTO xsd_compositors
+			(parent_symbol_id, parent_compositor_id, profile_id, kind, min_occurs, max_occurs, order_index)
+		VALUES
+			(${parentSymbolId}, ${parentCompositorId}, ${profileId}, ${kind}, ${minOccurs}, ${maxOccurs}, ${orderIndex})
+		RETURNING id
+	`;
+	return row.id;
+}
+
+async function insertChildEdge(
+	sql: Sql,
+	parentSymbolId: number,
+	compositorId: number,
+	childSymbolId: number,
+	profileId: number,
+	minOccurs: number,
+	maxOccurs: number | null,
+	orderIndex: number,
+): Promise<void> {
+	await sql`
+		INSERT INTO xsd_child_edges
+			(parent_symbol_id, compositor_id, child_symbol_id, profile_id, min_occurs, max_occurs, order_index)
+		VALUES
+			(${parentSymbolId}, ${compositorId}, ${childSymbolId}, ${profileId}, ${minOccurs}, ${maxOccurs}, ${orderIndex})
+	`;
+}
+
+async function insertGroupEdge(
+	sql: Sql,
+	parentSymbolId: number,
+	groupSymbolId: number,
+	profileId: number,
+	refKind: "group" | "attributeGroup",
+	orderIndex: number,
+): Promise<void> {
+	await sql`
+		INSERT INTO xsd_group_edges
+			(parent_symbol_id, group_symbol_id, profile_id, ref_kind, order_index)
+		VALUES
+			(${parentSymbolId}, ${groupSymbolId}, ${profileId}, ${refKind}, ${orderIndex})
+	`;
 }
 
 // --- Inheritance discovery from AST -------------------------------------
@@ -362,6 +647,12 @@ async function main() {
 		console.log(`profile memberships: ${stats.profileMembershipsInserted}`);
 		console.log(`inheritance edges:   ${stats.inheritanceEdgesInserted}`);
 		console.log(`inheritance unres.:  ${stats.inheritanceUnresolved}`);
+		console.log(`compositors:         ${stats.compositorsInserted}`);
+		console.log(`child edges:         ${stats.childEdgesInserted}`);
+		console.log(`child edges unres.:  ${stats.childEdgesUnresolved}`);
+		console.log(`group refs:          ${stats.groupRefsInserted}`);
+		console.log(`group refs unres.:   ${stats.groupRefsUnresolved}`);
+		console.log(`local elements:      ${stats.localElementsCreated}`);
 		console.log(`elapsed:             ${ms}ms`);
 	} finally {
 		await db.close();
