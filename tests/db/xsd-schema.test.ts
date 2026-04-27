@@ -12,10 +12,9 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
 import { createDbClient, type DbClient } from "../../packages/shared/src/db/index.ts";
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-	throw new Error("Missing DATABASE_URL for integration tests");
-}
+import { getTestDatabaseUrl } from "../test-db.ts";
+
+const databaseUrl = getTestDatabaseUrl();
 
 let db: DbClient;
 

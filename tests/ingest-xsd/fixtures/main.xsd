@@ -108,5 +108,26 @@
       <xsd:element name="shared" type="xsd:string"/>
     </xsd:sequence>
   </xsd:complexType>
+  <!-- Mirrors WML's *Change types: a complexContent/restriction that
+       carries no attribute redeclarations should still inherit the base's
+       attribute uses, not silently drop them. -->
+  <xsd:complexType name="CT_TrackedBase">
+    <xsd:attribute name="id" type="xsd:string" use="required"/>
+    <xsd:attribute name="author" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_TrackedRestricted">
+    <xsd:complexContent>
+      <xsd:restriction base="CT_TrackedBase"/>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <!-- The restriction redeclares 'id' as optional and adds nothing else;
+       'author' should still be inherited from the base. -->
+  <xsd:complexType name="CT_OverrideDerived">
+    <xsd:complexContent>
+      <xsd:restriction base="CT_TrackedBase">
+        <xsd:attribute name="id" type="xsd:string" use="optional"/>
+      </xsd:restriction>
+    </xsd:complexContent>
+  </xsd:complexType>
   <xsd:element name="document" type="CT_Empty"/>
 </xsd:schema>

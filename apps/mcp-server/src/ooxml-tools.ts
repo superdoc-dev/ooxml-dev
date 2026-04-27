@@ -21,6 +21,7 @@ import {
 	getEnums,
 	getNamespaceInfo,
 	lookupElement,
+	lookupSymbol,
 	lookupSymbolByTypeRef,
 	lookupType,
 	type NamespaceInfo,
@@ -212,34 +213,15 @@ export async function runOoxmlTool(
 				if (elementSym?.typeRef) {
 					typeSym = await lookupSymbolByTypeRef(sql, elementSym.typeRef, profile);
 				} else if (!elementSym) {
-					// Fall back to looking for a group with this name (so EG_PContent works).
-					const grp = await sql`
-						SELECT s.id, s.local_name, s.kind, s.vocabulary_id, s.type_ref,
-						       ns.uri AS namespace_uri, p.name AS profile_name, src.name AS source_name
-						FROM xsd_symbols s
-						JOIN xsd_symbol_profiles sp ON sp.symbol_id = s.id
-						JOIN xsd_namespaces ns ON ns.id = sp.namespace_id
-						JOIN xsd_profiles p ON p.id = sp.profile_id
-						LEFT JOIN reference_sources src ON src.id = sp.source_id
-						WHERE s.local_name = ${q.qname.localName}
-						  AND s.kind = 'group'
-						  AND ns.uri = ${q.qname.namespace}
-						  AND p.name = ${profile}
-						LIMIT 1
-					`;
-					const r = grp[0];
-					if (r) {
-						typeSym = {
-							id: r.id as number,
-							vocabularyId: r.vocabulary_id as string,
-							localName: r.local_name as string,
-							kind: r.kind as string,
-							typeRef: r.type_ref as string | null,
-							namespaceUri: r.namespace_uri as string,
-							profileName: r.profile_name as string,
-							sourceName: r.source_name as string | null,
-						};
-					}
+					// Fall back to looking for a named xsd:group with this qname (so
+					// EG_PContent and friends are reachable directly).
+					typeSym = await lookupSymbol(
+						sql,
+						q.qname.namespace,
+						q.qname.localName,
+						"group",
+						profile,
+					);
 				}
 			}
 			if (!typeSym) {

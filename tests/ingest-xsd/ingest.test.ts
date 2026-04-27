@@ -15,10 +15,9 @@ const FIXTURES_DIR = join(import.meta.dir, "fixtures");
 const REAL_CACHE_DIR = "./data/xsd-cache/ecma-376-transitional";
 const realCacheReady = existsSync(join(REAL_CACHE_DIR, "wml.xsd"));
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-	throw new Error("Missing DATABASE_URL for integration tests");
-}
+import { getTestDatabaseUrl } from "../test-db.ts";
+
+const databaseUrl = getTestDatabaseUrl();
 
 let db: DbClient;
 
@@ -122,7 +121,9 @@ test("ingest writes inheritance edges for extension and restriction", async () =
 	//   ST_Jc        restricts  xsd:string (simpleType)
 	//   ST_OnOff     restricts  xsd:boolean
 	//   ST_String    restricts  xsd:string
-	expect(stats.inheritanceEdgesInserted).toBe(6);
+	// 6 from the original fixture + 2 new restrictions (CT_TrackedRestricted,
+	// CT_OverrideDerived).
+	expect(stats.inheritanceEdgesInserted).toBe(8);
 	expect(stats.inheritanceUnresolved).toBe(0);
 
 	// Verify the CT_Extended → CT_Empty extension edge.
@@ -171,12 +172,14 @@ test("ingest is idempotent: re-running adds no new symbols/edges", async () => {
 		db,
 	});
 
-	expect(second.symbolsInserted).toBe(0);
-	expect(second.symbolsExisting).toBeGreaterThan(0);
-	expect(second.profileMembershipsInserted).toBe(0);
-	expect(second.inheritanceEdgesInserted).toBe(0);
-	// Content-model + attribute passes use delete-and-rewrite, so insert counts
-	// equal the first run on every re-run; DB row counts stay stable.
+	// Re-ingest purges everything this source previously wrote and re-creates
+	// it, so every stat equals the first run and symbolsExisting stays at 0.
+	// What matters for idempotency is that the DB row counts are stable across
+	// runs (asserted below).
+	expect(second.symbolsInserted).toBe(first.symbolsInserted);
+	expect(second.symbolsExisting).toBe(0);
+	expect(second.profileMembershipsInserted).toBe(first.profileMembershipsInserted);
+	expect(second.inheritanceEdgesInserted).toBe(first.inheritanceEdgesInserted);
 	expect(second.compositorsInserted).toBe(first.compositorsInserted);
 	expect(second.childEdgesInserted).toBe(first.childEdgesInserted);
 	expect(second.groupRefsInserted).toBe(first.groupRefsInserted);
@@ -332,14 +335,17 @@ test("ingest writes attributes, attributeGroup refs, and enum values", async () 
 	});
 
 	// Fixture attributes:
-	//   CT_Para/bold         (optional, type s:ST_OnOff)
-	//   CT_Extended/extra    (optional, type xsd:string, under complexContent/extension)
-	//   AG_TableProps/cols   (optional, type xsd:int)
-	//   CT_TableUser/caption (required, type xsd:string)
-	//   CT_RefTest/space     (required, ref="s:space"; type/default copied from decl)
-	//   AG_Inner/innerAttr   (optional, type xsd:string)
-	//   AG_Outer/outerAttr   (optional, type xsd:string)
-	expect(stats.attrEdgesInserted).toBe(7);
+	//   CT_Para/bold              (optional, type s:ST_OnOff)
+	//   CT_Extended/extra         (optional, type xsd:string, under complexContent/extension)
+	//   AG_TableProps/cols        (optional, type xsd:int)
+	//   CT_TableUser/caption      (required, type xsd:string)
+	//   CT_RefTest/space          (required, ref="s:space"; type/default copied from decl)
+	//   AG_Inner/innerAttr        (optional, type xsd:string)
+	//   AG_Outer/outerAttr        (optional, type xsd:string)
+	//   CT_TrackedBase/id         (required, type xsd:string)
+	//   CT_TrackedBase/author     (optional, type xsd:string)
+	//   CT_OverrideDerived/id     (optional override, type xsd:string)
+	expect(stats.attrEdgesInserted).toBe(10);
 	expect(stats.attrEdgesUnresolved).toBe(0);
 
 	// Fixture attributeGroup refs:

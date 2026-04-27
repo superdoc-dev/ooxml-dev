@@ -87,7 +87,14 @@ export interface SymbolHit {
 	sourceName: string | null;
 }
 
-/** Look up a symbol by namespace + localName + kind in a given profile. */
+/**
+ * Look up a top-level symbol by namespace + localName + kind in a given profile.
+ *
+ * Local element symbols (parent_symbol_id IS NOT NULL) are intentionally excluded:
+ * an inline `<xsd:element name="X" type="...">` declared in two different
+ * complexTypes is two distinct symbols whose identity depends on context. Reach
+ * those through `getChildren(parentTypeSymbolId, profile)` instead.
+ */
 export async function lookupSymbol(
 	sql: Sql,
 	namespace: string,
@@ -105,6 +112,7 @@ export async function lookupSymbol(
 		LEFT JOIN reference_sources src ON src.id = sp.source_id
 		WHERE s.local_name = ${localName}
 		  AND s.kind = ${kind}
+		  AND s.parent_symbol_id IS NULL
 		  AND ns.uri = ${namespace}
 		  AND p.name = ${profile}
 		LIMIT 1
@@ -331,15 +339,12 @@ async function getChildrenRecursive(
 	const out: ChildEdge[] = [];
 
 	// Inheritance: extension prepends base content; restriction replaces it.
+	// Recursing with isRoot=false sets source="inherited" inside the base call,
+	// so we just push the entries through.
 	const inherit = await getInheritanceEdge(sql, symbolId, profile);
 	if (inherit && inherit.relation === "extension") {
 		const base = await getChildrenRecursive(sql, inherit.baseId, profile, false);
-		// Already-emitted entries in `base` already carry their owning type name;
-		// flip their source to "inherited" relative to the root request.
-		for (const c of base) {
-			if (isRoot) c.source = "inherited";
-			out.push(c);
-		}
+		out.push(...base);
 	}
 
 	// Walk this type's own top-level compositors.
@@ -408,13 +413,17 @@ export interface AttrEntry {
 }
 
 /**
- * Attributes on a type symbol. Walks inheritance per XSD semantics
- * (extension prepends base attrs; restriction replaces them) and recurses
- * through attributeGroup refs, including refs nested inside other
- * attributeGroups. Cycles are guarded by a visited-set.
+ * Attributes on a type symbol, applying XSD §3.4.2.2 inheritance:
+ *   - extension: derived's own attribute uses are unioned with the base's.
+ *   - restriction: derived's attribute uses also union with the base's, with
+ *     the derived narrowing or prohibiting individual entries. Restriction
+ *     CANNOT silently drop a base attribute; only `use="prohibited"` does.
  *
- * Names are de-duplicated: a derived type's redeclaration of an inherited
- * attribute wins, so the first occurrence in walk order is what surfaces.
+ * Walk order emits the derived type's own attributes first, then attributeGroup
+ * refs the derived holds, then recurses into the base. Names are de-duplicated
+ * by first occurrence, so a derived redeclaration wins and base attrs only
+ * surface when the derived didn't override them. attributeGroup nesting is
+ * walked recursively with a visited-set against cycles.
  */
 export async function getAttributes(
 	sql: Sql,
@@ -437,17 +446,11 @@ async function collectAttrsForType(
 	seenAttrs: Set<string>,
 	visitedGroups: Set<number>,
 ): Promise<void> {
-	// Per XSD: extension prepends base; restriction replaces. We always emit base
-	// first when extending so derived declarations correctly override later.
-	const inherit = await getInheritanceEdge(sql, symbolId, profile);
-	if (inherit && inherit.relation === "extension") {
-		await collectAttrsForType(sql, inherit.baseId, profile, false, out, seenAttrs, visitedGroups);
-	}
-
 	const ownName = await getSymbolName(sql, symbolId);
 
 	// Direct attribute declarations on this symbol (whether complexType or
-	// attributeGroup; both can carry xsd:attribute children).
+	// attributeGroup; both can carry xsd:attribute children). Emit first so
+	// derived redeclarations override base attrs found below.
 	const directAttrs = await sql`
 		SELECT a.local_name, a.attr_use, a.default_value, a.fixed_value, a.type_ref, a.order_index
 		FROM xsd_attr_edges a
@@ -470,7 +473,8 @@ async function collectAttrsForType(
 		});
 	}
 
-	// attributeGroup refs hanging off this symbol; recurse into each.
+	// attributeGroup refs the derived itself holds; recurse into each before
+	// touching the base so a derived's group-bundled attr also wins.
 	const agRefs = await sql`
 		SELECT ge.group_symbol_id
 		FROM xsd_group_edges ge
@@ -489,6 +493,14 @@ async function collectAttrsForType(
 			seenAttrs,
 			visitedGroups,
 		);
+	}
+
+	// Inherited base attrs. Both extension and restriction inherit attribute uses
+	// per XSD §3.4.2.2; restriction can override or prohibit but cannot drop
+	// silently. Dedup by seenAttrs so the derived's redeclarations win.
+	const inherit = await getInheritanceEdge(sql, symbolId, profile);
+	if (inherit) {
+		await collectAttrsForType(sql, inherit.baseId, profile, false, out, seenAttrs, visitedGroups);
 	}
 }
 

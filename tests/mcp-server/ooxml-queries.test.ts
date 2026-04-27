@@ -19,8 +19,9 @@ import {
 } from "../../apps/mcp-server/src/ooxml-queries.ts";
 
 const FIXTURES_DIR = join(import.meta.dir, "..", "ingest-xsd", "fixtures");
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("Missing DATABASE_URL for integration tests");
+import { getTestDatabaseUrl } from "../test-db.ts";
+
+const databaseUrl = getTestDatabaseUrl();
 
 let db: DbClient;
 
@@ -97,10 +98,19 @@ test("lookupElement: top-level element with type_ref", async () => {
 	expect(hit?.namespaceUri).toBe(WML_NS);
 });
 
-test("lookupElement: local element (text inside CT_Para) is in the profile", async () => {
+test("lookupElement returns null for local-only names (no qname-addressable identity)", async () => {
+	// 'text' is declared inline in CT_Para and is not a top-level <xsd:element>.
+	// Per XSD it has no global qname; reach it via getChildren(CT_Para) instead.
 	const hit = await lookupElement(db.sql, WML_NS, "text", "transitional");
-	expect(hit).not.toBeNull();
-	expect(hit?.typeRef).toBe("{http://www.w3.org/2001/XMLSchema}string");
+	expect(hit).toBeNull();
+});
+
+test("lookupElement returns null for ambiguous local names (the tblGrid case)", async () => {
+	// 'shared' is declared inline in CT_OuterA (type ST_Jc) and in CT_OuterB
+	// (type xsd:string). Returning either would be wrong; lookupElement scopes
+	// by parent_symbol_id IS NULL and refuses to pick one.
+	const hit = await lookupElement(db.sql, WML_NS, "shared", "transitional");
+	expect(hit).toBeNull();
 });
 
 test("lookupType: complexType vs simpleType disambiguation", async () => {
@@ -285,6 +295,40 @@ test("xsd-builtin symbols have profile membership (lookupSymbolByTypeRef can fol
 	expect(t).not.toBeNull();
 	expect(t?.localName).toBe("string");
 	expect(t?.vocabularyId).toBe("xsd-builtin");
+});
+
+test("getAttributes: complexContent/restriction inherits base attributes", async () => {
+	// CT_TrackedRestricted restricts CT_TrackedBase but redeclares nothing.
+	// Per XSD §3.4.2.2 the base's attribute uses are inherited; restriction can
+	// narrow or prohibit but cannot drop silently.
+	const ct = await lookupType(db.sql, WML_NS, "CT_TrackedRestricted", "transitional");
+	if (!ct) throw new Error("CT_TrackedRestricted not found");
+	const attrs = await getAttributes(db.sql, ct.id, "transitional");
+	const names = attrs.map((a) => a.localName).sort();
+	expect(names).toEqual(["author", "id"]);
+
+	const idAttr = attrs.find((a) => a.localName === "id");
+	expect(idAttr?.attrUse).toBe("required");
+	expect(idAttr?.source).toBe("inherited");
+	expect(idAttr?.owningName).toBe("CT_TrackedBase");
+});
+
+test("getAttributes: derived redeclaration wins over inherited base attribute", async () => {
+	// CT_OverrideDerived restricts CT_TrackedBase and overrides 'id' from
+	// required to optional. The derived's redeclaration must win; the base's
+	// 'author' should still be inherited unchanged.
+	const ct = await lookupType(db.sql, WML_NS, "CT_OverrideDerived", "transitional");
+	if (!ct) throw new Error("CT_OverrideDerived not found");
+	const attrs = await getAttributes(db.sql, ct.id, "transitional");
+
+	const idAttr = attrs.find((a) => a.localName === "id");
+	expect(idAttr?.attrUse).toBe("optional");
+	expect(idAttr?.source).toBe("self");
+	expect(idAttr?.owningName).toBe("CT_OverrideDerived");
+
+	const authorAttr = attrs.find((a) => a.localName === "author");
+	expect(authorAttr?.attrUse).toBe("optional");
+	expect(authorAttr?.source).toBe("inherited");
 });
 
 test("getAttributes: nested attributeGroup chain unfolds (CT_NestedAttrUser -> innerAttr + outerAttr)", async () => {

@@ -99,6 +99,40 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 		const profileId = await ensureProfile(sql, opts.profileName);
 		const sourceId = await lookupSourceId(sql, opts.sourceName);
 
+		// Purge anything this source previously wrote so re-ingest is a clean
+		// rewrite and tolerant of schema migrations that change the symbol
+		// shape (e.g. the addition of parent_symbol_id for local-element
+		// scoping).
+		//
+		// Several FKs reference xsd_symbols.id WITHOUT cascade
+		// (xsd_inheritance_edges.base_symbol_id, xsd_child_edges.child_symbol_id,
+		// xsd_attr_edges.attr_symbol_id, xsd_group_edges.group_symbol_id), so
+		// those rows must be cleaned explicitly before the symbol delete. The
+		// LHS FKs (parent_symbol_id, symbol_id) DO cascade, as does
+		// xsd_symbol_profiles.symbol_id and behavior_notes.symbol_id. (When
+		// curated behavior_notes start landing, switch to natural-key
+		// reconciliation rather than cascade-delete.)
+		await sql`
+			DELETE FROM xsd_inheritance_edges
+			WHERE base_symbol_id IN (SELECT symbol_id FROM xsd_symbol_profiles WHERE source_id = ${sourceId})
+		`;
+		await sql`
+			DELETE FROM xsd_child_edges
+			WHERE child_symbol_id IN (SELECT symbol_id FROM xsd_symbol_profiles WHERE source_id = ${sourceId})
+		`;
+		await sql`
+			DELETE FROM xsd_attr_edges
+			WHERE attr_symbol_id IN (SELECT symbol_id FROM xsd_symbol_profiles WHERE source_id = ${sourceId})
+		`;
+		await sql`
+			DELETE FROM xsd_group_edges
+			WHERE group_symbol_id IN (SELECT symbol_id FROM xsd_symbol_profiles WHERE source_id = ${sourceId})
+		`;
+		await sql`
+			DELETE FROM xsd_symbols
+			WHERE id IN (SELECT symbol_id FROM xsd_symbol_profiles WHERE source_id = ${sourceId})
+		`;
+
 		// Pass 1: namespaces, symbols, profile memberships.
 		const namespaceIds = new Map<string, number>();
 		const symbolIds = new Map<string, number>(); // canonical (vocab|local|kind) -> id
