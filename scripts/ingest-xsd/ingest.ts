@@ -72,7 +72,9 @@ export interface IngestStats {
 
 export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<IngestStats> {
 	const log = opts.verbose ? (msg: string) => console.log(msg) : () => {};
-	log(`[xsd:ingest] parsing schemas from ${opts.schemaDir} (entrypoints: ${opts.entrypoints.join(", ")})...`);
+	log(
+		`[xsd:ingest] parsing schemas from ${opts.schemaDir} (entrypoints: ${opts.entrypoints.join(", ")})...`,
+	);
 	const parseResult = await parseSchemaSet({
 		schemaDir: opts.schemaDir,
 		entrypoints: opts.entrypoints,
@@ -703,7 +705,11 @@ function parseMaxOccurs(raw: string | undefined): number | null {
 // to stay under the limit for the widest row we send (xsd_attr_edges, 9 cols).
 const BATCH_CHUNK = 500;
 
-async function inChunks<T>(items: T[], size: number, fn: (chunk: T[]) => Promise<void>): Promise<void> {
+async function inChunks<T>(
+	items: T[],
+	size: number,
+	fn: (chunk: T[]) => Promise<void>,
+): Promise<void> {
 	for (let i = 0; i < items.length; i += size) {
 		await fn(items.slice(i, i + size));
 	}
