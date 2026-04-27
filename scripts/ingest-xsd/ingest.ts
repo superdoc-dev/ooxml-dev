@@ -636,7 +636,7 @@ async function lookupSourceId(sql: Sql, name: string): Promise<number> {
 	const [row] = await sql`SELECT id FROM reference_sources WHERE name = ${name} LIMIT 1`;
 	if (!row)
 		throw new Error(
-			`reference_sources row not found for name='${name}'. Run db:sync-sources first.`,
+			`reference_sources row not found for name='${name}'. Run \`bun run sources:sync\` first.`,
 		);
 	return row.id;
 }
