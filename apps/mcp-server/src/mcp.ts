@@ -7,6 +7,12 @@
 import { createDb } from "./db";
 import { embedQuery } from "./embeddings";
 import type { Env } from "./index";
+import {
+	OOXML_TOOL_DEFS,
+	callOoxmlTool,
+	isOoxmlTool,
+	ooxmlToolsEnabled,
+} from "./ooxml-tools";
 
 // JSON-RPC types
 interface JsonRpcRequest {
@@ -132,13 +138,12 @@ function handleInitialize(id: number | string | null): JsonRpcResponse {
 	};
 }
 
-function handleToolsList(id: number | string | null): JsonRpcResponse {
+function handleToolsList(id: number | string | null, env: Env): JsonRpcResponse {
+	const tools = ooxmlToolsEnabled(env) ? [...TOOLS, ...OOXML_TOOL_DEFS] : TOOLS;
 	return {
 		jsonrpc: "2.0",
 		id,
-		result: {
-			tools: TOOLS,
-		},
+		result: { tools },
 	};
 }
 
@@ -161,6 +166,25 @@ async function handleToolsCall(
 
 	try {
 		let resultText: string;
+
+		// Phase 4 OOXML tools, feature-flagged. tools/list also gates on the same flag,
+		// so callers should not see these tool names unless the flag is on. Defensive
+		// check here in case a caller hand-crafts a request.
+		if (isOoxmlTool(name)) {
+			if (!ooxmlToolsEnabled(env)) {
+				return {
+					jsonrpc: "2.0",
+					id,
+					error: { code: METHOD_NOT_FOUND, message: `Unknown tool: ${name}` },
+				};
+			}
+			resultText = await callOoxmlTool(name, args ?? {}, env);
+			return {
+				jsonrpc: "2.0",
+				id,
+				result: { content: [{ type: "text", text: resultText }] },
+			};
+		}
 
 		switch (name) {
 			case "search_ecma_spec": {
@@ -374,7 +398,7 @@ export async function handleMcpRequest(request: Request, env: Env): Promise<Resp
 			return new Response(null, { status: 202 });
 
 		case "tools/list":
-			return jsonResponse(handleToolsList(id));
+			return jsonResponse(handleToolsList(id, env));
 
 		case "tools/call":
 			return jsonResponse(await handleToolsCall(id, body.params, env));

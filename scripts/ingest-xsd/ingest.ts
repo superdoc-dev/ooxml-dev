@@ -827,9 +827,7 @@ async function handleAttribute(
 				const declPrefixMap = parseResult.namespaceByPrefix.get(topDecl.documentPath);
 				if (declPrefixMap) {
 					const t = resolveQNameAttr(declAttrs.type, declPrefixMap, topDecl.namespace);
-					typeRef = t.resolved
-						? `{${t.qname.namespace}}${t.qname.localName}`
-						: declAttrs.type;
+					typeRef = t.resolved ? `{${t.qname.namespace}}${t.qname.localName}` : declAttrs.type;
 				} else {
 					typeRef = declAttrs.type;
 				}
