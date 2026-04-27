@@ -9,7 +9,7 @@
  *
  * 2. QName-valued attributes (ref, type, base, substitutionGroup, etc.) hold a
  *    "prefix:localName" string. Resolution uses the document's xmlns:* declarations.
- *    `resolveQNameAttr` returns either a resolved tuple or "unresolved" — we never
+ *    `resolveQNameAttr` returns either a resolved tuple or "unresolved" - we never
  *    invent a namespace for an unknown prefix.
  */
 

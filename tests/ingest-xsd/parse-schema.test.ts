@@ -85,10 +85,10 @@ test("declarationsByQName indexes all top-level declarations across documents", 
 	const set = await parseSchemaSet({ schemaDir: FIXTURES_DIR, entrypoints: ["main.xsd"] });
 
 	const counts = countByKind(set.declarationsByQName);
-	// main.xsd: 1 element, 11 complexType, 1 simpleType, 1 group, 3 attributeGroup
+	// main.xsd: 1 element, 13 complexType, 1 simpleType, 1 group, 3 attributeGroup
 	// shared.xsd: 2 simpleType, 1 attribute
 	expect(counts.element).toBe(1);
-	expect(counts.complexType).toBe(11);
+	expect(counts.complexType).toBe(13);
 	expect(counts.simpleType).toBe(3);
 	expect(counts.group).toBe(1);
 	expect(counts.attributeGroup).toBe(3);

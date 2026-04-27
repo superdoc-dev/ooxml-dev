@@ -67,15 +67,22 @@ CREATE TABLE xsd_namespaces (
 -- type_ref holds the Clark-style {namespace}localName for elements and attributes
 -- that declare a @type. NULL for complexType/simpleType/group/attributeGroup.
 -- Phase 4 lookups follow type_ref to resolve element -> type when reading children.
+--
+-- parent_symbol_id is NULL for top-level declarations and set to the owning
+-- type/group symbol for inline (local) element declarations. The canonical
+-- key is 4-tuple with NULLS NOT DISTINCT so top-level decls still collide on
+-- name while local decls remain scoped per-owner.
 CREATE TABLE xsd_symbols (
   id SERIAL PRIMARY KEY,
   vocabulary_id TEXT NOT NULL,
   local_name TEXT NOT NULL,
   kind TEXT NOT NULL,
   type_ref TEXT,
+  parent_symbol_id INT REFERENCES xsd_symbols(id) ON DELETE CASCADE,
   payload JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (vocabulary_id, local_name, kind)
+  CONSTRAINT xsd_symbols_canonical_key
+    UNIQUE NULLS NOT DISTINCT (vocabulary_id, local_name, kind, parent_symbol_id)
 );
 
 CREATE TABLE xsd_symbol_profiles (
@@ -181,6 +188,7 @@ CREATE TABLE behavior_notes (
 );
 
 CREATE INDEX idx_xsd_symbols_lookup ON xsd_symbols(vocabulary_id, local_name, kind);
+CREATE INDEX idx_xsd_symbols_parent ON xsd_symbols(parent_symbol_id);
 CREATE INDEX idx_xsd_child_edges_parent ON xsd_child_edges(parent_symbol_id);
 CREATE INDEX idx_xsd_child_edges_compositor ON xsd_child_edges(compositor_id);
 CREATE INDEX idx_xsd_attr_edges_symbol ON xsd_attr_edges(symbol_id);

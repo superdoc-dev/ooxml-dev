@@ -192,6 +192,16 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 					baseId = id;
 					if (inserted) stats.symbolsInserted++;
 					else stats.symbolsExisting++;
+					// Link to a profile so ooxml_lookup_type / lookupSymbolByTypeRef can
+					// follow type_refs into the W3C XSD namespace.
+					let xsdNsId = namespaceIds.get(baseQ.namespace);
+					if (xsdNsId == null) {
+						xsdNsId = await ensureNamespace(sql, baseQ.namespace);
+						namespaceIds.set(baseQ.namespace, xsdNsId);
+						stats.namespacesEnsured++;
+					}
+					const linked = await linkSymbolToProfile(sql, id, profileId, xsdNsId, sourceId);
+					if (linked) stats.profileMembershipsInserted++;
 				}
 				if (baseId == null) {
 					stats.inheritanceUnresolved++;
@@ -473,7 +483,15 @@ async function handleElement(
 			const r = resolveQNameAttr(a.type, ctx.prefixMap, ctx.ownerDecl.namespace);
 			typeRef = r.resolved ? `{${r.qname.namespace}}${r.qname.localName}` : a.type;
 		}
-		const key = symbolKey(ctx.ownerDecl.vocabularyId, a.name, "element");
+		// Local elements are scoped per-owner: the same name in two different
+		// complexTypes is not the same symbol (e.g. WML's tblGrid is
+		// CT_TblGridBase inside CT_TblGridChange but CT_TblGrid inside CT_Tbl).
+		const key = symbolKey(
+			ctx.ownerDecl.vocabularyId,
+			a.name,
+			"element",
+			ctx.ownerSymbolId,
+		);
 		let id = ctx.symbolIds.get(key);
 		if (id == null) {
 			const res = await upsertSymbol(
@@ -482,6 +500,7 @@ async function handleElement(
 				a.name,
 				"element",
 				typeRef,
+				ctx.ownerSymbolId,
 			);
 			ctx.symbolIds.set(key, res.id);
 			if (res.inserted) {
@@ -611,11 +630,12 @@ async function upsertSymbol(
 	localName: string,
 	kind: string,
 	typeRef: string | null = null,
+	parentSymbolId: number | null = null,
 ): Promise<{ id: number; inserted: boolean }> {
 	const [row] = await sql`
-		INSERT INTO xsd_symbols (vocabulary_id, local_name, kind, type_ref)
-		VALUES (${vocabularyId}, ${localName}, ${kind}, ${typeRef})
-		ON CONFLICT (vocabulary_id, local_name, kind) DO UPDATE
+		INSERT INTO xsd_symbols (vocabulary_id, local_name, kind, type_ref, parent_symbol_id)
+		VALUES (${vocabularyId}, ${localName}, ${kind}, ${typeRef}, ${parentSymbolId})
+		ON CONFLICT ON CONSTRAINT xsd_symbols_canonical_key DO UPDATE
 			SET type_ref = COALESCE(EXCLUDED.type_ref, xsd_symbols.type_ref)
 		RETURNING id, (xmax = 0) AS inserted
 	`;
@@ -916,8 +936,8 @@ function stripPrefixLocal(tag: string | null): string | null {
 	return colon < 0 ? tag : tag.slice(colon + 1);
 }
 
-function symbolKey(vocab: string, local: string, kind: string): string {
-	return `${vocab}|${local}|${kind}`;
+function symbolKey(vocab: string, local: string, kind: string, parentId: number | null = null): string {
+	return `${vocab}|${local}|${kind}|${parentId ?? ""}`;
 }
 
 // --- CLI -----------------------------------------------------------------

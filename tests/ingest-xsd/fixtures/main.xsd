@@ -95,5 +95,18 @@
   <xsd:complexType name="CT_NestedAttrUser">
     <xsd:attributeGroup ref="AG_Outer"/>
   </xsd:complexType>
+  <!-- Mirrors the WML tblGrid case: two complexTypes both declare a local
+       element with the same name but DIFFERENT types. They must not collapse
+       into a single symbol. -->
+  <xsd:complexType name="CT_OuterA">
+    <xsd:sequence>
+      <xsd:element name="shared" type="ST_Jc"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_OuterB">
+    <xsd:sequence>
+      <xsd:element name="shared" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
   <xsd:element name="document" type="CT_Empty"/>
 </xsd:schema>

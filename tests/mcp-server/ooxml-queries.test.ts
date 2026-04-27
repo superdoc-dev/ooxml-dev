@@ -242,6 +242,51 @@ test("getChildren: nested compositor flatten preserves document order (CT_Nested
 	expect(branchA?.compositorPath).toEqual(["sequence(1..1)", "choice(0..unbounded)"]);
 });
 
+test("local element symbols are scoped per-owner (no cross-CT collapse)", async () => {
+	// Mirrors the WML tblGrid case (CT_TblGridBase inside CT_TblGridChange vs
+	// CT_TblGrid inside CT_Tbl). CT_OuterA / CT_OuterB both declare an inline
+	// 'shared' element but with different @type. They must produce distinct
+	// per-parent symbols, each carrying its own type_ref.
+	const ctA = await lookupType(db.sql, WML_NS, "CT_OuterA", "transitional");
+	const ctB = await lookupType(db.sql, WML_NS, "CT_OuterB", "transitional");
+	if (!ctA || !ctB) throw new Error("CT_OuterA / CT_OuterB not found");
+
+	const aChildren = await getChildren(db.sql, ctA.id, "transitional");
+	const bChildren = await getChildren(db.sql, ctB.id, "transitional");
+	expect(aChildren).toHaveLength(1);
+	expect(bChildren).toHaveLength(1);
+	expect(aChildren[0].localName).toBe("shared");
+	expect(bChildren[0].localName).toBe("shared");
+
+	// The two `shared` symbols carry different type_refs.
+	const sharedSymbols = await db.sql`
+		SELECT s.id, s.type_ref, s.parent_symbol_id, parent.local_name AS parent_name
+		FROM xsd_symbols s
+		JOIN xsd_symbols parent ON parent.id = s.parent_symbol_id
+		WHERE s.local_name = 'shared' AND s.kind = 'element'
+		ORDER BY parent.local_name
+	`;
+	expect(sharedSymbols).toHaveLength(2);
+	expect(sharedSymbols[0].parent_name).toBe("CT_OuterA");
+	expect(sharedSymbols[0].type_ref).toBe(`{${WML_NS}}ST_Jc`);
+	expect(sharedSymbols[1].parent_name).toBe("CT_OuterB");
+	expect(sharedSymbols[1].type_ref).toBe("{http://www.w3.org/2001/XMLSchema}string");
+});
+
+test("xsd-builtin symbols have profile membership (lookupSymbolByTypeRef can follow xsd:string)", async () => {
+	// Built-ins like xsd:string are auto-created during inheritance resolution and
+	// must be linked to xsd_symbol_profiles, otherwise ooxml_lookup_type for
+	// 'xsd:string' and lookupSymbolByTypeRef for {...XMLSchema}string return null.
+	const t = await lookupSymbolByTypeRef(
+		db.sql,
+		"{http://www.w3.org/2001/XMLSchema}string",
+		"transitional",
+	);
+	expect(t).not.toBeNull();
+	expect(t?.localName).toBe("string");
+	expect(t?.vocabularyId).toBe("xsd-builtin");
+});
+
 test("getAttributes: nested attributeGroup chain unfolds (CT_NestedAttrUser -> innerAttr + outerAttr)", async () => {
 	const ct = await lookupType(db.sql, WML_NS, "CT_NestedAttrUser", "transitional");
 	if (!ct) throw new Error("CT_NestedAttrUser not found");

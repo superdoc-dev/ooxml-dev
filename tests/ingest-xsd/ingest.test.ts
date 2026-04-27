@@ -223,12 +223,17 @@ test("ingest writes compositors and child edges for nested content models", asyn
 	//   CT_BaseWithChildren: sequence -> [ alpha, beta ]
 	//   CT_DerivedExtended: complexContent/extension -> sequence -> [ gamma ]
 	//   CT_NestedOrder:    sequence -> [ head, choice -> [ branchA, branchB ], tail ]
-	// Compositors: CT_Para(1) + CT_Body(2) + EG_PContent(1) + Base(1) + Derived(1) + Nested(2) = 8
-	expect(stats.compositorsInserted).toBe(8);
+	// Compositors: CT_Para(1) + CT_Body(2) + EG_PContent(1) + Base(1) + Derived(1) +
+	// Nested(2) + OuterA(1) + OuterB(1) = 10
+	expect(stats.compositorsInserted).toBe(10);
 	expect(stats.groupRefsInserted).toBe(1);
-	// Local element names (deduped per vocab): text, break, r, alpha, beta, gamma,
-	// head, branchA, branchB, tail = 10.
-	expect(stats.localElementsCreated).toBe(10);
+	// Local element symbols are scoped per-owner now, so the two `shared` decls
+	// in CT_OuterA and CT_OuterB count separately.
+	// Per-owner locals: text(CT_Para), break(CT_Body), r(EG_PContent),
+	// alpha+beta(CT_BaseWithChildren), gamma(CT_DerivedExtended),
+	// head+branchA+branchB+tail(CT_NestedOrder), shared(CT_OuterA),
+	// shared(CT_OuterB) = 12.
+	expect(stats.localElementsCreated).toBe(12);
 	expect(stats.childEdgesUnresolved).toBe(0);
 	expect(stats.groupRefsUnresolved).toBe(0);
 
