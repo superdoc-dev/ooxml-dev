@@ -75,19 +75,35 @@ test("xsd_compositors CHECK constraints", async () => {
 		INSERT INTO xsd_symbols (vocabulary_id, local_name, kind) VALUES ('wml-main', 'CT_Tbl', 'complexType') RETURNING id
 	`;
 
-	await db.sql`
+	// Top-level: parent_symbol_id only.
+	const [topLevel] = await db.sql`
 		INSERT INTO xsd_compositors (parent_symbol_id, profile_id, kind)
 		VALUES (${symbol.id}, ${profile.id}, 'sequence')
+		RETURNING id
 	`;
 
+	// Nested: parent_compositor_id only.
+	await db.sql`
+		INSERT INTO xsd_compositors (parent_compositor_id, profile_id, kind)
+		VALUES (${topLevel.id}, ${profile.id}, 'choice')
+	`;
+
+	// kind must be sequence/choice/all.
 	await expectThrows(() => db.sql`
 		INSERT INTO xsd_compositors (parent_symbol_id, profile_id, kind)
 		VALUES (${symbol.id}, ${profile.id}, 'group')
 	`);
 
+	// Neither parent set is rejected.
 	await expectThrows(
 		() => db.sql`INSERT INTO xsd_compositors (profile_id, kind) VALUES (${profile.id}, 'sequence')`,
 	);
+
+	// Both parents set is rejected (top-level vs nested are mutually exclusive).
+	await expectThrows(() => db.sql`
+		INSERT INTO xsd_compositors (parent_symbol_id, parent_compositor_id, profile_id, kind)
+		VALUES (${symbol.id}, ${topLevel.id}, ${profile.id}, 'sequence')
+	`);
 });
 
 test("xsd_attr_edges attr_use enum and default", async () => {

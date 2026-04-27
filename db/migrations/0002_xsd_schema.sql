@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS xsd_symbol_profiles (
 );
 
 -- Content-model compositors (xs:sequence | xs:choice | xs:all). Profile-scoped.
--- Either parent_symbol_id or parent_compositor_id is set (top-level vs nested).
+-- Exactly one of parent_symbol_id (top-level on a type/group) or
+-- parent_compositor_id (nested inside another compositor) is set.
 CREATE TABLE IF NOT EXISTS xsd_compositors (
 	id SERIAL PRIMARY KEY,
 	parent_symbol_id INT REFERENCES xsd_symbols(id) ON DELETE CASCADE,
@@ -50,7 +51,7 @@ CREATE TABLE IF NOT EXISTS xsd_compositors (
 	min_occurs INT DEFAULT 1,
 	max_occurs INT,                    -- NULL = unbounded
 	order_index INT DEFAULT 0,
-	CHECK (parent_symbol_id IS NOT NULL OR parent_compositor_id IS NOT NULL)
+	CHECK ((parent_symbol_id IS NOT NULL) <> (parent_compositor_id IS NOT NULL))
 );
 
 -- Child element edges. parent_symbol_id is denormalized for fast "children of X" queries

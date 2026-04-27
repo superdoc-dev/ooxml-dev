@@ -84,6 +84,7 @@ CREATE TABLE xsd_symbol_profiles (
   UNIQUE (symbol_id, profile_id)
 );
 
+-- Exactly one of parent_symbol_id (top-level) or parent_compositor_id (nested) is set.
 CREATE TABLE xsd_compositors (
   id SERIAL PRIMARY KEY,
   parent_symbol_id INT REFERENCES xsd_symbols(id) ON DELETE CASCADE,
@@ -93,7 +94,7 @@ CREATE TABLE xsd_compositors (
   min_occurs INT DEFAULT 1,
   max_occurs INT,
   order_index INT DEFAULT 0,
-  CHECK (parent_symbol_id IS NOT NULL OR parent_compositor_id IS NOT NULL)
+  CHECK ((parent_symbol_id IS NOT NULL) <> (parent_compositor_id IS NOT NULL))
 );
 
 CREATE TABLE xsd_child_edges (
