@@ -8,7 +8,7 @@ The OOXML spec, explained by people who actually implemented it.
 
 ## What is this?
 
-An interactive reference for ECMA-376 (Office Open XML) built by the [SuperDoc — DOCX editing and tooling](https://superdoc.dev) team. Every page combines XML structure, live rendered previews, and implementation notes that tell you what the spec doesn't.
+An interactive reference for ECMA-376 (Office Open XML), built by the team behind [SuperDoc](https://superdoc.dev). Every page combines XML structure, live rendered previews, and implementation notes the spec leaves out. The MCP server exposes the same knowledge to AI assistants: prose search across the spec PDFs and deterministic schema lookup over the parsed XSDs.
 
 - **Live previews** - Edit XML and see it render in real-time. Every example is a working document.
 - **Implementation notes** - Where Word diverges from the spec, what will break your code, and what to do about it.

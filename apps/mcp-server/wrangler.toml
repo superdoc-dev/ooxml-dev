@@ -3,6 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2026-01-28"
 compatibility_flags = ["nodejs_compat"]
 
+# Custom domain. Wrangler claims api.ooxml.dev for this worker on deploy and
+# manages the DNS record on Cloudflare's side; we don't add it manually.
+routes = [
+	{ pattern = "api.ooxml.dev", custom_domain = true }
+]
+
 # Secrets (set via wrangler secret):
 # wrangler secret put DATABASE_URL
 # wrangler secret put VOYAGE_API_KEY
