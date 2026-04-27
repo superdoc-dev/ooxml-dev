@@ -7,12 +7,7 @@
 import { createDb } from "./db";
 import { embedQuery } from "./embeddings";
 import type { Env } from "./index";
-import {
-	OOXML_TOOL_DEFS,
-	callOoxmlTool,
-	isOoxmlTool,
-	ooxmlToolsEnabled,
-} from "./ooxml-tools";
+import { callOoxmlTool, isOoxmlTool, OOXML_TOOL_DEFS, ooxmlToolsEnabled } from "./ooxml-tools";
 
 // JSON-RPC types
 interface JsonRpcRequest {

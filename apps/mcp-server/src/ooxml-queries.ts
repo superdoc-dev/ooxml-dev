@@ -39,9 +39,7 @@ export interface ParsedQName {
 	rawPrefix: string | null;
 }
 
-export type QNameParseResult =
-	| { ok: true; qname: ParsedQName }
-	| { ok: false; reason: string };
+export type QNameParseResult = { ok: true; qname: ParsedQName } | { ok: false; reason: string };
 
 /**
  * Parse a user-supplied qname. Accepts:
@@ -177,120 +175,219 @@ export interface ChildEdge {
 	compositorKind: string | null;
 	compositorId: number | null;
 	parentCompositorId: number | null;
+	/** Compositor stack from outermost to direct parent, e.g. ["sequence", "choice(0..unbounded)"]. */
+	compositorPath: string[];
 	source: "self" | "inherited";
 	owningTypeName: string;
 }
 
-/**
- * Collect inheritance ancestors of a type symbol (self first, then bases).
- * Each entry is the symbol id and its name for surfacing in responses.
- */
-async function collectInheritance(
+interface InheritanceEdgeRow {
+	baseId: number;
+	relation: "extension" | "restriction";
+}
+
+async function getInheritanceEdge(
 	sql: Sql,
-	rootSymbolId: number,
+	symbolId: number,
 	profile: string,
-): Promise<Array<{ id: number; localName: string; vocabularyId: string }>> {
+): Promise<InheritanceEdgeRow | null> {
 	const rows = await sql`
-		WITH RECURSIVE chain AS (
-			SELECT s.id, s.local_name, s.vocabulary_id, 0 AS depth
-			FROM xsd_symbols s
-			WHERE s.id = ${rootSymbolId}
-			UNION ALL
-			SELECT base.id, base.local_name, base.vocabulary_id, c.depth + 1
-			FROM chain c
-			JOIN xsd_inheritance_edges e ON e.symbol_id = c.id
-			JOIN xsd_profiles p ON p.id = e.profile_id
-			JOIN xsd_symbols base ON base.id = e.base_symbol_id
-			WHERE p.name = ${profile}
-		)
-		SELECT id, local_name, vocabulary_id FROM chain ORDER BY depth
+		SELECT e.base_symbol_id, e.relation
+		FROM xsd_inheritance_edges e
+		JOIN xsd_profiles p ON p.id = e.profile_id
+		WHERE e.symbol_id = ${symbolId} AND p.name = ${profile}
+		LIMIT 1
 	`;
-	return rows.map((r: Record<string, unknown>) => ({
-		id: r.id as number,
-		localName: r.local_name as string,
-		vocabularyId: r.vocabulary_id as string,
-	}));
+	if (rows.length === 0) return null;
+	return { baseId: rows[0].base_symbol_id as number, relation: rows[0].relation as InheritanceEdgeRow["relation"] };
+}
+
+async function getSymbolName(sql: Sql, symbolId: number): Promise<string> {
+	const rows = await sql`SELECT local_name FROM xsd_symbols WHERE id = ${symbolId} LIMIT 1`;
+	return (rows[0]?.local_name as string | undefined) ?? "(unknown)";
+}
+
+interface CompositorRow {
+	id: number;
+	kind: "sequence" | "choice" | "all";
+	minOccurs: number;
+	maxOccurs: number | null;
+	orderIndex: number;
+}
+
+function formatOccurs(min: number, max: number | null): string {
+	const maxStr = max === null ? "unbounded" : String(max);
+	if (min === 1 && max === 1) return "1..1";
+	return `${min}..${maxStr}`;
 }
 
 /**
- * Children of a type symbol, walking inheritance to union the bases' content.
- * Returns elements (from xsd_child_edges) and group refs (from xsd_group_edges
- * with ref_kind='group') in document order. Group refs are returned as-is;
- * callers who want them flattened can call getChildren on the referenced group.
+ * Walk a single compositor's content tree in document order, descending into
+ * nested compositors. Each emitted child carries the full compositor path so
+ * callers can reconstruct nesting.
  */
-export async function getChildren(
+async function walkCompositor(
 	sql: Sql,
-	rootSymbolId: number,
+	compositor: CompositorRow,
 	profile: string,
+	pathSoFar: string[],
+	source: ChildEdge["source"],
+	owningTypeName: string,
 ): Promise<ChildEdge[]> {
-	const chain = await collectInheritance(sql, rootSymbolId, profile);
-	if (chain.length === 0) return [];
+	const path = [...pathSoFar, `${compositor.kind}(${formatOccurs(compositor.minOccurs, compositor.maxOccurs)})`];
+
+	const elemRows = await sql`
+		SELECT 'element' AS entry_kind, s.local_name, s.vocabulary_id, ns.uri AS namespace_uri,
+		       e.min_occurs, e.max_occurs, e.order_index, NULL::int AS nested_compositor_id
+		FROM xsd_child_edges e
+		JOIN xsd_symbols s ON s.id = e.child_symbol_id
+		LEFT JOIN xsd_symbol_profiles sp ON sp.symbol_id = s.id AND sp.profile_id = e.profile_id
+		LEFT JOIN xsd_namespaces ns ON ns.id = sp.namespace_id
+		JOIN xsd_profiles p ON p.id = e.profile_id
+		WHERE e.compositor_id = ${compositor.id} AND p.name = ${profile}
+	`;
+	const groupRows = await sql`
+		SELECT 'group' AS entry_kind, g.local_name, g.vocabulary_id, NULL AS namespace_uri,
+		       ge.min_occurs, ge.max_occurs, ge.order_index, NULL::int AS nested_compositor_id
+		FROM xsd_group_edges ge
+		JOIN xsd_symbols g ON g.id = ge.group_symbol_id
+		JOIN xsd_profiles p ON p.id = ge.profile_id
+		WHERE ge.compositor_id = ${compositor.id} AND ge.ref_kind = 'group' AND p.name = ${profile}
+	`;
+	const nestedRows = await sql`
+		SELECT 'compositor' AS entry_kind, NULL AS local_name, NULL AS vocabulary_id, NULL AS namespace_uri,
+		       c.min_occurs, c.max_occurs, c.order_index, c.id AS nested_compositor_id, c.kind
+		FROM xsd_compositors c
+		JOIN xsd_profiles p ON p.id = c.profile_id
+		WHERE c.parent_compositor_id = ${compositor.id} AND p.name = ${profile}
+	`;
+
+	const all = [...elemRows, ...groupRows, ...nestedRows];
+	all.sort((a, b) => (a.order_index as number) - (b.order_index as number));
 
 	const out: ChildEdge[] = [];
-	for (const ancestor of chain) {
-		const elemRows = await sql`
-			SELECT s.local_name, s.vocabulary_id, ns.uri AS namespace_uri,
-			       e.min_occurs, e.max_occurs, e.order_index,
-			       c.kind AS compositor_kind, c.id AS compositor_id, c.parent_compositor_id
-			FROM xsd_child_edges e
-			JOIN xsd_symbols s ON s.id = e.child_symbol_id
-			LEFT JOIN xsd_symbol_profiles sp ON sp.symbol_id = s.id AND sp.profile_id = e.profile_id
-			LEFT JOIN xsd_namespaces ns ON ns.id = sp.namespace_id
-			JOIN xsd_compositors c ON c.id = e.compositor_id
-			JOIN xsd_profiles p ON p.id = e.profile_id
-			WHERE e.parent_symbol_id = ${ancestor.id} AND p.name = ${profile}
-			ORDER BY e.order_index
-		`;
-		const groupRows = await sql`
-			SELECT g.local_name, g.vocabulary_id,
-			       ge.min_occurs, ge.max_occurs, ge.order_index,
-			       c.kind AS compositor_kind, ge.compositor_id, c.parent_compositor_id
-			FROM xsd_group_edges ge
-			JOIN xsd_symbols g ON g.id = ge.group_symbol_id
-			LEFT JOIN xsd_compositors c ON c.id = ge.compositor_id
-			JOIN xsd_profiles p ON p.id = ge.profile_id
-			WHERE ge.parent_symbol_id = ${ancestor.id}
-			  AND ge.ref_kind = 'group'
-			  AND p.name = ${profile}
-			ORDER BY ge.order_index
-		`;
-
-		const ancestorEntries: ChildEdge[] = [];
-		for (const r of elemRows) {
-			ancestorEntries.push({
-				kind: "element",
+	for (const r of all) {
+		if (r.entry_kind === "compositor") {
+			const nested: CompositorRow = {
+				id: r.nested_compositor_id as number,
+				kind: r.kind as CompositorRow["kind"],
+				minOccurs: r.min_occurs as number,
+				maxOccurs: r.max_occurs as number | null,
+				orderIndex: r.order_index as number,
+			};
+			const inner = await walkCompositor(sql, nested, profile, path, source, owningTypeName);
+			out.push(...inner);
+		} else {
+			out.push({
+				kind: r.entry_kind as "element" | "group",
 				localName: r.local_name as string,
 				vocabularyId: r.vocabulary_id as string,
 				namespaceUri: (r.namespace_uri as string | null) ?? null,
 				minOccurs: r.min_occurs as number,
 				maxOccurs: r.max_occurs as number | null,
 				orderIndex: r.order_index as number,
-				compositorKind: r.compositor_kind as string | null,
-				compositorId: r.compositor_id as number | null,
-				parentCompositorId: r.parent_compositor_id as number | null,
-				source: ancestor.id === rootSymbolId ? "self" : "inherited",
-				owningTypeName: ancestor.localName,
+				compositorKind: compositor.kind,
+				compositorId: compositor.id,
+				parentCompositorId: null,
+				compositorPath: path,
+				source,
+				owningTypeName,
 			});
 		}
-		for (const r of groupRows) {
-			ancestorEntries.push({
-				kind: "group",
-				localName: r.local_name as string,
-				vocabularyId: r.vocabulary_id as string,
-				namespaceUri: null,
-				minOccurs: r.min_occurs as number,
-				maxOccurs: r.max_occurs as number | null,
-				orderIndex: r.order_index as number,
-				compositorKind: r.compositor_kind as string | null,
-				compositorId: r.compositor_id as number | null,
-				parentCompositorId: r.parent_compositor_id as number | null,
-				source: ancestor.id === rootSymbolId ? "self" : "inherited",
-				owningTypeName: ancestor.localName,
-			});
-		}
-		ancestorEntries.sort((a, b) => a.orderIndex - b.orderIndex);
-		out.push(...ancestorEntries);
 	}
+	return out;
+}
+
+/**
+ * Children of a type symbol in correct document order. Walks inheritance per
+ * XSD semantics: complexContent/extension prepends the base's effective content
+ * before the derived type's; complexContent/restriction REPLACES the base's
+ * content (we don't include the base). Within a type, walks the compositor
+ * tree DFS so nested sequences/choices flatten in document order.
+ *
+ * Group refs are returned as edges; resolve them by calling getChildren on the
+ * group symbol.
+ */
+export async function getChildren(
+	sql: Sql,
+	rootSymbolId: number,
+	profile: string,
+): Promise<ChildEdge[]> {
+	return getChildrenRecursive(sql, rootSymbolId, profile, true);
+}
+
+async function getChildrenRecursive(
+	sql: Sql,
+	symbolId: number,
+	profile: string,
+	isRoot: boolean,
+): Promise<ChildEdge[]> {
+	const out: ChildEdge[] = [];
+
+	// Inheritance: extension prepends base content; restriction replaces it.
+	const inherit = await getInheritanceEdge(sql, symbolId, profile);
+	if (inherit && inherit.relation === "extension") {
+		const base = await getChildrenRecursive(sql, inherit.baseId, profile, false);
+		// Already-emitted entries in `base` already carry their owning type name;
+		// flip their source to "inherited" relative to the root request.
+		for (const c of base) {
+			if (isRoot) c.source = "inherited";
+			out.push(c);
+		}
+	}
+
+	// Walk this type's own top-level compositors.
+	const topCompositors = await sql`
+		SELECT c.id, c.kind, c.min_occurs, c.max_occurs, c.order_index
+		FROM xsd_compositors c
+		JOIN xsd_profiles p ON p.id = c.profile_id
+		WHERE c.parent_symbol_id = ${symbolId} AND p.name = ${profile}
+		ORDER BY c.order_index
+	`;
+	const ownName = await getSymbolName(sql, symbolId);
+	const source: ChildEdge["source"] = isRoot ? "self" : "inherited";
+	for (const r of topCompositors) {
+		const c: CompositorRow = {
+			id: r.id as number,
+			kind: r.kind as CompositorRow["kind"],
+			minOccurs: r.min_occurs as number,
+			maxOccurs: r.max_occurs as number | null,
+			orderIndex: r.order_index as number,
+		};
+		const inner = await walkCompositor(sql, c, profile, [], source, ownName);
+		out.push(...inner);
+	}
+
+	// Top-level group refs that hang directly off the type (compositor_id IS NULL).
+	const topLevelGroups = await sql`
+		SELECT g.local_name, g.vocabulary_id, ge.min_occurs, ge.max_occurs, ge.order_index
+		FROM xsd_group_edges ge
+		JOIN xsd_symbols g ON g.id = ge.group_symbol_id
+		JOIN xsd_profiles p ON p.id = ge.profile_id
+		WHERE ge.parent_symbol_id = ${symbolId}
+		  AND ge.ref_kind = 'group'
+		  AND ge.compositor_id IS NULL
+		  AND p.name = ${profile}
+		ORDER BY ge.order_index
+	`;
+	for (const r of topLevelGroups) {
+		out.push({
+			kind: "group",
+			localName: r.local_name as string,
+			vocabularyId: r.vocabulary_id as string,
+			namespaceUri: null,
+			minOccurs: r.min_occurs as number,
+			maxOccurs: r.max_occurs as number | null,
+			orderIndex: r.order_index as number,
+			compositorKind: null,
+			compositorId: null,
+			parentCompositorId: null,
+			compositorPath: [],
+			source,
+			owningTypeName: ownName,
+		});
+	}
+
 	return out;
 }
 
@@ -305,81 +402,145 @@ export interface AttrEntry {
 }
 
 /**
- * Attributes on a type symbol, including those from base types (inheritance)
- * and from attributeGroup refs (recursively).
+ * Attributes on a type symbol. Walks inheritance per XSD semantics
+ * (extension prepends base attrs; restriction replaces them) and recurses
+ * through attributeGroup refs, including refs nested inside other
+ * attributeGroups. Cycles are guarded by a visited-set.
+ *
+ * Names are de-duplicated: a derived type's redeclaration of an inherited
+ * attribute wins, so the first occurrence in walk order is what surfaces.
  */
 export async function getAttributes(
 	sql: Sql,
 	rootSymbolId: number,
 	profile: string,
 ): Promise<AttrEntry[]> {
-	const chain = await collectInheritance(sql, rootSymbolId, profile);
 	const out: AttrEntry[] = [];
-	const seenAttrs = new Set<string>(); // dedupe by local name; derived overrides base
-
-	for (const ancestor of chain) {
-		const directAttrs = await sql`
-			SELECT a.local_name, a.attr_use, a.default_value, a.fixed_value, a.type_ref, a.order_index
-			FROM xsd_attr_edges a
-			JOIN xsd_profiles p ON p.id = a.profile_id
-			WHERE a.symbol_id = ${ancestor.id} AND p.name = ${profile}
-			ORDER BY a.order_index
-		`;
-		for (const r of directAttrs) {
-			const name = r.local_name as string;
-			if (seenAttrs.has(name)) continue;
-			seenAttrs.add(name);
-			out.push({
-				localName: name,
-				attrUse: r.attr_use as "required" | "optional" | "prohibited",
-				defaultValue: r.default_value as string | null,
-				fixedValue: r.fixed_value as string | null,
-				typeRef: r.type_ref as string | null,
-				source: ancestor.id === rootSymbolId ? "self" : "inherited",
-				owningName: ancestor.localName,
-			});
-		}
-
-		// attributeGroup refs (resolve recursively)
-		const agRefs = await sql`
-			SELECT ge.group_symbol_id, g.local_name AS group_name
-			FROM xsd_group_edges ge
-			JOIN xsd_symbols g ON g.id = ge.group_symbol_id
-			JOIN xsd_profiles p ON p.id = ge.profile_id
-			WHERE ge.parent_symbol_id = ${ancestor.id}
-			  AND ge.ref_kind = 'attributeGroup'
-			  AND p.name = ${profile}
-			ORDER BY ge.order_index
-		`;
-		for (const ag of agRefs) {
-			const groupName = ag.group_name as string;
-			const innerChain = await collectInheritance(sql, ag.group_symbol_id as number, profile);
-			for (const inner of innerChain) {
-				const innerAttrs = await sql`
-					SELECT a.local_name, a.attr_use, a.default_value, a.fixed_value, a.type_ref, a.order_index
-					FROM xsd_attr_edges a
-					JOIN xsd_profiles p ON p.id = a.profile_id
-					WHERE a.symbol_id = ${inner.id} AND p.name = ${profile}
-					ORDER BY a.order_index
-				`;
-				for (const r of innerAttrs) {
-					const name = r.local_name as string;
-					if (seenAttrs.has(name)) continue;
-					seenAttrs.add(name);
-					out.push({
-						localName: name,
-						attrUse: r.attr_use as "required" | "optional" | "prohibited",
-						defaultValue: r.default_value as string | null,
-						fixedValue: r.fixed_value as string | null,
-						typeRef: r.type_ref as string | null,
-						source: "attributeGroup",
-						owningName: groupName,
-					});
-				}
-			}
-		}
-	}
+	const seenAttrs = new Set<string>();
+	const visitedGroups = new Set<number>();
+	await collectAttrsForType(sql, rootSymbolId, profile, true, out, seenAttrs, visitedGroups);
 	return out;
+}
+
+async function collectAttrsForType(
+	sql: Sql,
+	symbolId: number,
+	profile: string,
+	isRoot: boolean,
+	out: AttrEntry[],
+	seenAttrs: Set<string>,
+	visitedGroups: Set<number>,
+): Promise<void> {
+	// Per XSD: extension prepends base; restriction replaces. We always emit base
+	// first when extending so derived declarations correctly override later.
+	const inherit = await getInheritanceEdge(sql, symbolId, profile);
+	if (inherit && inherit.relation === "extension") {
+		await collectAttrsForType(sql, inherit.baseId, profile, false, out, seenAttrs, visitedGroups);
+	}
+
+	const ownName = await getSymbolName(sql, symbolId);
+
+	// Direct attribute declarations on this symbol (whether complexType or
+	// attributeGroup; both can carry xsd:attribute children).
+	const directAttrs = await sql`
+		SELECT a.local_name, a.attr_use, a.default_value, a.fixed_value, a.type_ref, a.order_index
+		FROM xsd_attr_edges a
+		JOIN xsd_profiles p ON p.id = a.profile_id
+		WHERE a.symbol_id = ${symbolId} AND p.name = ${profile}
+		ORDER BY a.order_index
+	`;
+	for (const r of directAttrs) {
+		const name = r.local_name as string;
+		if (seenAttrs.has(name)) continue;
+		seenAttrs.add(name);
+		out.push({
+			localName: name,
+			attrUse: r.attr_use as "required" | "optional" | "prohibited",
+			defaultValue: r.default_value as string | null,
+			fixedValue: r.fixed_value as string | null,
+			typeRef: r.type_ref as string | null,
+			source: isRoot ? "self" : "inherited",
+			owningName: ownName,
+		});
+	}
+
+	// attributeGroup refs hanging off this symbol; recurse into each.
+	const agRefs = await sql`
+		SELECT ge.group_symbol_id
+		FROM xsd_group_edges ge
+		JOIN xsd_profiles p ON p.id = ge.profile_id
+		WHERE ge.parent_symbol_id = ${symbolId}
+		  AND ge.ref_kind = 'attributeGroup'
+		  AND p.name = ${profile}
+		ORDER BY ge.order_index
+	`;
+	for (const ag of agRefs) {
+		await collectAttrsFromAttributeGroup(
+			sql,
+			ag.group_symbol_id as number,
+			profile,
+			out,
+			seenAttrs,
+			visitedGroups,
+		);
+	}
+}
+
+async function collectAttrsFromAttributeGroup(
+	sql: Sql,
+	groupSymbolId: number,
+	profile: string,
+	out: AttrEntry[],
+	seenAttrs: Set<string>,
+	visitedGroups: Set<number>,
+): Promise<void> {
+	if (visitedGroups.has(groupSymbolId)) return;
+	visitedGroups.add(groupSymbolId);
+
+	const groupName = await getSymbolName(sql, groupSymbolId);
+
+	const directAttrs = await sql`
+		SELECT a.local_name, a.attr_use, a.default_value, a.fixed_value, a.type_ref, a.order_index
+		FROM xsd_attr_edges a
+		JOIN xsd_profiles p ON p.id = a.profile_id
+		WHERE a.symbol_id = ${groupSymbolId} AND p.name = ${profile}
+		ORDER BY a.order_index
+	`;
+	for (const r of directAttrs) {
+		const name = r.local_name as string;
+		if (seenAttrs.has(name)) continue;
+		seenAttrs.add(name);
+		out.push({
+			localName: name,
+			attrUse: r.attr_use as "required" | "optional" | "prohibited",
+			defaultValue: r.default_value as string | null,
+			fixedValue: r.fixed_value as string | null,
+			typeRef: r.type_ref as string | null,
+			source: "attributeGroup",
+			owningName: groupName,
+		});
+	}
+
+	// Nested attributeGroup refs inside this group.
+	const innerRefs = await sql`
+		SELECT ge.group_symbol_id
+		FROM xsd_group_edges ge
+		JOIN xsd_profiles p ON p.id = ge.profile_id
+		WHERE ge.parent_symbol_id = ${groupSymbolId}
+		  AND ge.ref_kind = 'attributeGroup'
+		  AND p.name = ${profile}
+		ORDER BY ge.order_index
+	`;
+	for (const ref of innerRefs) {
+		await collectAttrsFromAttributeGroup(
+			sql,
+			ref.group_symbol_id as number,
+			profile,
+			out,
+			seenAttrs,
+			visitedGroups,
+		);
+	}
 }
 
 export interface EnumEntry {
@@ -387,11 +548,7 @@ export interface EnumEntry {
 	orderIndex: number;
 }
 
-export async function getEnums(
-	sql: Sql,
-	symbolId: number,
-	profile: string,
-): Promise<EnumEntry[]> {
+export async function getEnums(sql: Sql, symbolId: number, profile: string): Promise<EnumEntry[]> {
 	const rows = await sql`
 		SELECT e.value, e.order_index
 		FROM xsd_enums e

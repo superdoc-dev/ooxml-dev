@@ -25,7 +25,7 @@
     "xsd:smoke": "bun scripts/ingest-xsd/smoke.ts",
     "xsd:ingest": "bun scripts/ingest-xsd/ingest.ts",
     "ooxml:call": "bun scripts/ooxml-call.ts",
-    "test": "bun test tests/",
+    "test": "bun test tests/db/ && bun test tests/ingest-xsd/ && bun test tests/mcp-server/",
     "ingest": "bun scripts/ingest/pipeline.ts",
     "ingest:chunk": "bun scripts/ingest/chunk.ts",
     "ingest:embed": "bun scripts/ingest/embed.ts",

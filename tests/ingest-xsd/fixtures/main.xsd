@@ -55,5 +55,45 @@
   <xsd:complexType name="CT_RefTest">
     <xsd:attribute ref="s:space" use="required"/>
   </xsd:complexType>
+  <!-- Cases for getChildren ordering across complexContent/extension. -->
+  <xsd:complexType name="CT_BaseWithChildren">
+    <xsd:sequence>
+      <xsd:element name="alpha" type="xsd:string"/>
+      <xsd:element name="beta" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_DerivedExtended">
+    <xsd:complexContent>
+      <xsd:extension base="CT_BaseWithChildren">
+        <xsd:sequence>
+          <xsd:element name="gamma" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <!-- Case for nested compositor ordering: top sequence holds an element then
+       a choice; the choice's first child must NOT shadow the top sequence's
+       later siblings. -->
+  <xsd:complexType name="CT_NestedOrder">
+    <xsd:sequence>
+      <xsd:element name="head" type="xsd:string"/>
+      <xsd:choice minOccurs="0" maxOccurs="unbounded">
+        <xsd:element name="branchA" type="xsd:string"/>
+        <xsd:element name="branchB" type="xsd:string"/>
+      </xsd:choice>
+      <xsd:element name="tail" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <!-- Cases for recursive attributeGroup walk. -->
+  <xsd:attributeGroup name="AG_Inner">
+    <xsd:attribute name="innerAttr" type="xsd:string"/>
+  </xsd:attributeGroup>
+  <xsd:attributeGroup name="AG_Outer">
+    <xsd:attributeGroup ref="AG_Inner"/>
+    <xsd:attribute name="outerAttr" type="xsd:string"/>
+  </xsd:attributeGroup>
+  <xsd:complexType name="CT_NestedAttrUser">
+    <xsd:attributeGroup ref="AG_Outer"/>
+  </xsd:complexType>
   <xsd:element name="document" type="CT_Empty"/>
 </xsd:schema>

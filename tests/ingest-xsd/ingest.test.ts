@@ -122,7 +122,7 @@ test("ingest writes inheritance edges for extension and restriction", async () =
 	//   ST_Jc        restricts  xsd:string (simpleType)
 	//   ST_OnOff     restricts  xsd:boolean
 	//   ST_String    restricts  xsd:string
-	expect(stats.inheritanceEdgesInserted).toBe(5);
+	expect(stats.inheritanceEdgesInserted).toBe(6);
 	expect(stats.inheritanceUnresolved).toBe(0);
 
 	// Verify the CT_Extended → CT_Empty extension edge.
@@ -214,17 +214,21 @@ test("ingest writes compositors and child edges for nested content models", asyn
 	});
 
 	// Fixture content models:
-	//   CT_Para:       sequence -> element name="text"
-	//   CT_Body:       sequence -> [ element ref="document",
-	//                                choice (minOccurs=0, maxOccurs=unbounded) -> [
-	//                                  group ref="EG_PContent",
-	//                                  element name="break"
-	//                                ]]
-	//   EG_PContent:   choice -> element name="r"
-	// Compositors total: CT_Para(1) + CT_Body(2) + EG_PContent(1) = 4
-	expect(stats.compositorsInserted).toBe(4);
+	//   CT_Para:           sequence -> element name="text"
+	//   CT_Body:           sequence -> [ element ref="document",
+	//                                    choice (0..unbounded) -> [
+	//                                      group ref="EG_PContent",
+	//                                      element name="break" ]]
+	//   EG_PContent:       choice -> element name="r"
+	//   CT_BaseWithChildren: sequence -> [ alpha, beta ]
+	//   CT_DerivedExtended: complexContent/extension -> sequence -> [ gamma ]
+	//   CT_NestedOrder:    sequence -> [ head, choice -> [ branchA, branchB ], tail ]
+	// Compositors: CT_Para(1) + CT_Body(2) + EG_PContent(1) + Base(1) + Derived(1) + Nested(2) = 8
+	expect(stats.compositorsInserted).toBe(8);
 	expect(stats.groupRefsInserted).toBe(1);
-	expect(stats.localElementsCreated).toBe(3); // text, break, r
+	// Local element names (deduped per vocab): text, break, r, alpha, beta, gamma,
+	// head, branchA, branchB, tail = 10.
+	expect(stats.localElementsCreated).toBe(10);
 	expect(stats.childEdgesUnresolved).toBe(0);
 	expect(stats.groupRefsUnresolved).toBe(0);
 
@@ -323,17 +327,21 @@ test("ingest writes attributes, attributeGroup refs, and enum values", async () 
 	});
 
 	// Fixture attributes:
-	//   CT_Para/bold        (optional, type s:ST_OnOff)
-	//   CT_Extended/extra   (optional, type xsd:string, under complexContent/extension)
-	//   AG_TableProps/cols  (optional, type xsd:int)
+	//   CT_Para/bold         (optional, type s:ST_OnOff)
+	//   CT_Extended/extra    (optional, type xsd:string, under complexContent/extension)
+	//   AG_TableProps/cols   (optional, type xsd:int)
 	//   CT_TableUser/caption (required, type xsd:string)
-	//   CT_RefTest/space    (required, ref="s:space"; type/default copied from decl)
-	expect(stats.attrEdgesInserted).toBe(5);
+	//   CT_RefTest/space     (required, ref="s:space"; type/default copied from decl)
+	//   AG_Inner/innerAttr   (optional, type xsd:string)
+	//   AG_Outer/outerAttr   (optional, type xsd:string)
+	expect(stats.attrEdgesInserted).toBe(7);
 	expect(stats.attrEdgesUnresolved).toBe(0);
 
 	// Fixture attributeGroup refs:
 	//   CT_TableUser -> AG_TableProps
-	expect(stats.attrGroupRefsInserted).toBe(1);
+	//   AG_Outer -> AG_Inner (nested attributeGroup ref)
+	//   CT_NestedAttrUser -> AG_Outer
+	expect(stats.attrGroupRefsInserted).toBe(3);
 	expect(stats.attrGroupRefsUnresolved).toBe(0);
 
 	// Fixture enums: ST_Jc has 3 values; ST_OnOff and ST_String have base restrictions
@@ -462,6 +470,7 @@ test("ingest preserves element/attribute @type, local-element profile membership
 test.skipIf(!realCacheReady)(
 	"smoke: ingest WML closure into the dev DB and verify counts",
 	async () => {
+		// Real WML ingest writes thousands of rows; bump timeout from default 5s.
 		const stats = await ingestSchemaSet({
 			schemaDir: REAL_CACHE_DIR,
 			entrypoints: ["wml.xsd"],
@@ -499,4 +508,5 @@ test.skipIf(!realCacheReady)(
 		`;
 		expect(ctTblChildren.length).toBeGreaterThan(0);
 	},
+	30_000,
 );

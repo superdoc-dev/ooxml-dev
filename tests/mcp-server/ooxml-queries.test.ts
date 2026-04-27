@@ -210,6 +210,56 @@ test("lookupElement: returns null for unknown qname", async () => {
 	expect(hit).toBeNull();
 });
 
+test("getChildren: extension prepends base content (CT_DerivedExtended -> alpha, beta, gamma)", async () => {
+	const ct = await lookupType(db.sql, WML_NS, "CT_DerivedExtended", "transitional");
+	if (!ct) throw new Error("CT_DerivedExtended not found");
+	const children = await getChildren(db.sql, ct.id, "transitional");
+	const names = children.map((c) => c.localName);
+	// XSD extension semantics: base content first, then derived.
+	expect(names).toEqual(["alpha", "beta", "gamma"]);
+	// Provenance distinguishes base-derived from self-derived.
+	expect(children[0].source).toBe("inherited");
+	expect(children[0].owningTypeName).toBe("CT_BaseWithChildren");
+	expect(children[2].source).toBe("self");
+	expect(children[2].owningTypeName).toBe("CT_DerivedExtended");
+});
+
+test("getChildren: nested compositor flatten preserves document order (CT_NestedOrder)", async () => {
+	const ct = await lookupType(db.sql, WML_NS, "CT_NestedOrder", "transitional");
+	if (!ct) throw new Error("CT_NestedOrder not found");
+	const children = await getChildren(db.sql, ct.id, "transitional");
+	// Top sequence: head, choice(branchA, branchB), tail.
+	// Document order should be head, branchA, branchB, tail (NOT branchA first because
+	// its order_index=0 inside the choice).
+	const names = children.map((c) => c.localName);
+	expect(names).toEqual(["head", "branchA", "branchB", "tail"]);
+
+	// Compositor path makes the nesting visible.
+	const head = children.find((c) => c.localName === "head");
+	expect(head?.compositorPath).toEqual(["sequence(1..1)"]);
+
+	const branchA = children.find((c) => c.localName === "branchA");
+	expect(branchA?.compositorPath).toEqual(["sequence(1..1)", "choice(0..unbounded)"]);
+});
+
+test("getAttributes: nested attributeGroup chain unfolds (CT_NestedAttrUser -> innerAttr + outerAttr)", async () => {
+	const ct = await lookupType(db.sql, WML_NS, "CT_NestedAttrUser", "transitional");
+	if (!ct) throw new Error("CT_NestedAttrUser not found");
+	const attrs = await getAttributes(db.sql, ct.id, "transitional");
+	const names = attrs.map((a) => a.localName).sort();
+	// CT_NestedAttrUser refs AG_Outer; AG_Outer refs AG_Inner.
+	// Both attributes must surface.
+	expect(names).toEqual(["innerAttr", "outerAttr"]);
+
+	const inner = attrs.find((a) => a.localName === "innerAttr");
+	expect(inner?.source).toBe("attributeGroup");
+	expect(inner?.owningName).toBe("AG_Inner");
+
+	const outer = attrs.find((a) => a.localName === "outerAttr");
+	expect(outer?.source).toBe("attributeGroup");
+	expect(outer?.owningName).toBe("AG_Outer");
+});
+
 test("element-to-type chain: lookup w-style element, follow type_ref, fetch children", async () => {
 	// document → CT_Empty (no content) ⇒ children empty.
 	const elem = await lookupElement(db.sql, WML_NS, "document", "transitional");

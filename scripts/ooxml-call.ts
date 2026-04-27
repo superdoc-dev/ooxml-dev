@@ -16,12 +16,12 @@
  *   DATABASE_URL - postgres connection string (defaults to local docker)
  */
 
-import { createDbClient } from "../packages/shared/src/db/index.ts";
 import {
-	type OoxmlToolName,
 	isOoxmlTool,
+	type OoxmlToolName,
 	runOoxmlTool,
 } from "../apps/mcp-server/src/ooxml-tools.ts";
+import { createDbClient } from "../packages/shared/src/db/index.ts";
 
 async function main() {
 	const [, , toolArg, argsArg] = process.argv;
