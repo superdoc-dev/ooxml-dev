@@ -16,8 +16,6 @@ import {
 	type AttrEntry,
 	type ChildEdge,
 	type EnumEntry,
-	type NamespaceInfo,
-	type SymbolHit,
 	getAttributes,
 	getChildren,
 	getEnums,
@@ -25,7 +23,9 @@ import {
 	lookupElement,
 	lookupSymbolByTypeRef,
 	lookupType,
+	type NamespaceInfo,
 	parseQName,
+	type SymbolHit,
 } from "./ooxml-queries";
 
 export const DEFAULT_PROFILE = "transitional";
@@ -79,7 +79,8 @@ export const OOXML_TOOL_DEFS = [
 			properties: {
 				qname: {
 					type: "string",
-					description: "Element, complexType, or group qname (e.g. 'w:tbl', 'CT_Tbl', 'EG_PContent').",
+					description:
+						"Element, complexType, or group qname (e.g. 'w:tbl', 'CT_Tbl', 'EG_PContent').",
 				},
 				profile: { type: "string", description: "Profile name (default: 'transitional')." },
 			},
@@ -143,12 +144,30 @@ export function isOoxmlTool(name: string): name is OoxmlToolName {
 // biome-ignore lint/suspicious/noExplicitAny: neon's tagged template is loosely typed.
 type Sql = any;
 
+/**
+ * Worker-side entry point: constructs a Neon HTTP client from env and dispatches.
+ * Local CLIs and tests should call `runOoxmlTool` directly with their own sql
+ * (e.g. postgres.js against a local Postgres) to avoid the Neon HTTP path.
+ */
 export async function callOoxmlTool(
 	name: OoxmlToolName,
 	args: Record<string, unknown>,
 	env: OoxmlEnv,
 ): Promise<string> {
-	const sql: Sql = neon(env.DATABASE_URL);
+	const sql = neon(env.DATABASE_URL);
+	return runOoxmlTool(name, args, sql);
+}
+
+/**
+ * Driver-agnostic dispatch. `sql` is any tagged-template SQL function whose
+ * shape matches `(strings, ...values) => Promise<row[]>` (Neon and postgres.js
+ * both qualify).
+ */
+export async function runOoxmlTool(
+	name: OoxmlToolName,
+	args: Record<string, unknown>,
+	sql: Sql,
+): Promise<string> {
 	const profile = (args.profile as string | undefined) ?? DEFAULT_PROFILE;
 
 	switch (name) {
@@ -175,7 +194,11 @@ export async function callOoxmlTool(
 					profile,
 				);
 			}
-			return formatSymbolReport(hit.kind === "simpleType" ? "SimpleType" : "ComplexType", hit, profile);
+			return formatSymbolReport(
+				hit.kind === "simpleType" ? "SimpleType" : "ComplexType",
+				hit,
+				profile,
+			);
 		}
 
 		case "ooxml_children": {
@@ -286,7 +309,9 @@ function formatSymbolReport(label: string, hit: SymbolHit, profile: string): str
 	lines.push(`## ${label}: ${hit.localName}`);
 	lines.push("");
 	lines.push(`- profile: ${profile}`);
-	lines.push(`- canonical: (vocabulary=${hit.vocabularyId}, kind=${hit.kind}, name=${hit.localName})`);
+	lines.push(
+		`- canonical: (vocabulary=${hit.vocabularyId}, kind=${hit.kind}, name=${hit.localName})`,
+	);
 	lines.push(`- namespace: ${hit.namespaceUri}`);
 	if (hit.typeRef) lines.push(`- type_ref: ${hit.typeRef}`);
 	if (hit.sourceName) lines.push(`- source: ${hit.sourceName}`);

@@ -24,6 +24,7 @@
     "xsd:fetch": "bun scripts/fetch-xsd.ts",
     "xsd:smoke": "bun scripts/ingest-xsd/smoke.ts",
     "xsd:ingest": "bun scripts/ingest-xsd/ingest.ts",
+    "ooxml:call": "bun scripts/ooxml-call.ts",
     "test": "bun test tests/",
     "ingest": "bun scripts/ingest/pipeline.ts",
     "ingest:chunk": "bun scripts/ingest/chunk.ts",
