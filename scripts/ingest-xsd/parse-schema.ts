@@ -109,6 +109,11 @@ function extractNamespacePrefixes(attrs: Record<string, string>): Map<string, st
 		if (name === "xmlns") map.set("", value);
 		else if (name.startsWith("xmlns:")) map.set(name.slice("xmlns:".length), value);
 	}
+	// The xml prefix is reserved (XML Namespaces 1.0 §3) and is bound to
+	// http://www.w3.org/XML/1998/namespace whether or not the document
+	// declares it explicitly. Schemas like wml.xsd reference xml:space without
+	// an xmlns:xml declaration; bind it here so resolveQNameAttr can resolve.
+	if (!map.has("xml")) map.set("xml", "http://www.w3.org/XML/1998/namespace");
 	return map;
 }
 

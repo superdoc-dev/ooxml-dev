@@ -45,6 +45,8 @@ export interface IngestSchemaSetOptions {
 	sourceName: string;
 	/** Existing DbClient. The ingest opens its own transaction inside. */
 	db: DbClient;
+	/** Print progress lines to stdout. CLI sets true; tests/library callers default to silent. */
+	verbose?: boolean;
 }
 
 export interface IngestStats {
@@ -69,10 +71,13 @@ export interface IngestStats {
 }
 
 export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<IngestStats> {
+	const log = opts.verbose ? (msg: string) => console.log(msg) : () => {};
+	log(`[xsd:ingest] parsing schemas from ${opts.schemaDir} (entrypoints: ${opts.entrypoints.join(", ")})...`);
 	const parseResult = await parseSchemaSet({
 		schemaDir: opts.schemaDir,
 		entrypoints: opts.entrypoints,
 	});
+	log(`[xsd:ingest] parsed ${parseResult.documents.size} documents`);
 
 	const stats: IngestStats = {
 		documents: parseResult.documents.size,
@@ -112,6 +117,7 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 		// xsd_symbol_profiles.symbol_id and behavior_notes.symbol_id. (When
 		// curated behavior_notes start landing, switch to natural-key
 		// reconciliation rather than cascade-delete.)
+		log("[xsd:ingest] purging previous source rows...");
 		await sql`
 			DELETE FROM xsd_inheritance_edges
 			WHERE base_symbol_id IN (SELECT symbol_id FROM xsd_symbol_profiles WHERE source_id = ${sourceId})
@@ -135,7 +141,7 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 
 		// Pass 1: namespaces, symbols, profile memberships.
 		const namespaceIds = new Map<string, number>();
-		const symbolIds = new Map<string, number>(); // canonical (vocab|local|kind) -> id
+		const symbolIds = new Map<string, number>(); // canonical (vocab|local|kind|parentId) -> id
 
 		for (const doc of parseResult.documents.values()) {
 			if (!namespaceIds.has(doc.targetNamespace)) {
@@ -145,38 +151,64 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 			}
 		}
 
+		// Collect distinct top-level symbol specs first; one batched UPSERT
+		// folds all of them into the table, then we rebuild symbolIds from
+		// the returned canonical keys.
+		const topLevelSymbolSpecs: SymbolSpec[] = [];
+		const symbolSpecNamespaces: string[] = [];
+		const seenSymbolKeys = new Set<string>();
 		for (const decls of parseResult.declarationsByQName.values()) {
 			for (const decl of decls) {
 				const key = symbolKey(decl.vocabularyId, decl.localName, decl.kind);
-				if (symbolIds.has(key)) continue;
-
-				// Capture @type for elements and attributes; resolved Clark-style.
-				const typeRef = resolveDeclTypeRef(decl, parseResult);
-
-				const { id, inserted } = await upsertSymbol(
-					sql,
-					decl.vocabularyId,
-					decl.localName,
-					decl.kind,
-					typeRef,
-				);
-				symbolIds.set(key, id);
-				if (inserted) stats.symbolsInserted++;
-				else stats.symbolsExisting++;
-
-				const nsId = namespaceIds.get(decl.namespace);
-				if (!nsId) {
-					throw new Error(
-						`Internal: missing namespace id for ${decl.namespace} (decl ${decl.localName})`,
-					);
-				}
-				const linked = await linkSymbolToProfile(sql, id, profileId, nsId, sourceId);
-				if (linked) stats.profileMembershipsInserted++;
+				if (seenSymbolKeys.has(key)) continue;
+				seenSymbolKeys.add(key);
+				topLevelSymbolSpecs.push({
+					vocabulary_id: decl.vocabularyId,
+					local_name: decl.localName,
+					kind: decl.kind,
+					type_ref: resolveDeclTypeRef(decl, parseResult),
+					parent_symbol_id: null,
+				});
+				symbolSpecNamespaces.push(decl.namespace);
 			}
 		}
 
+		log(`[xsd:ingest] pass 1: upserting ${topLevelSymbolSpecs.length} top-level symbols...`);
+		const symbolRows = await batchUpsertSymbols(sql, topLevelSymbolSpecs);
+		for (const r of symbolRows) {
+			symbolIds.set(symbolKey(r.vocabulary_id, r.local_name, r.kind, r.parent_symbol_id), r.id);
+			if (r.inserted) stats.symbolsInserted++;
+			else stats.symbolsExisting++;
+		}
+
+		const membershipSpecs: MembershipSpec[] = [];
+		for (let i = 0; i < topLevelSymbolSpecs.length; i++) {
+			const spec = topLevelSymbolSpecs[i];
+			const id = symbolIds.get(symbolKey(spec.vocabulary_id, spec.local_name, spec.kind));
+			if (id == null) continue;
+			const ns = symbolSpecNamespaces[i];
+			const nsId = namespaceIds.get(ns);
+			if (!nsId) {
+				throw new Error(`Internal: missing namespace id for ${ns} (decl ${spec.local_name})`);
+			}
+			membershipSpecs.push({
+				symbol_id: id,
+				profile_id: profileId,
+				namespace_id: nsId,
+				source_id: sourceId,
+			});
+		}
+		stats.profileMembershipsInserted += await batchInsertMemberships(sql, membershipSpecs);
+		log(
+			`[xsd:ingest] pass 1: ${stats.symbolsInserted} new, ${stats.symbolsExisting} existing, ${stats.profileMembershipsInserted} memberships`,
+		);
+
 		// Pass 2: inheritance edges. Resolve base qname through the document's
 		// prefix map; ensure built-in xsd:* placeholders exist on demand.
+		// xsd-builtin upserts stay per-row (only a handful) since each one
+		// must return its id before the inheritance spec can be queued.
+		log("[xsd:ingest] pass 2: resolving inheritance edges...");
+		const inheritanceSpecs: InheritanceSpec[] = [];
 		for (const decls of parseResult.declarationsByQName.values()) {
 			for (const decl of decls) {
 				const inherit = findInheritance(decl);
@@ -242,10 +274,18 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 				const childId = symbolIds.get(symbolKey(decl.vocabularyId, decl.localName, decl.kind));
 				if (childId == null) continue;
 
-				const inserted = await insertInheritance(sql, childId, baseId, profileId, inherit.relation);
-				if (inserted) stats.inheritanceEdgesInserted++;
+				inheritanceSpecs.push({
+					symbol_id: childId,
+					base_symbol_id: baseId,
+					profile_id: profileId,
+					relation: inherit.relation,
+				});
 			}
 		}
+		stats.inheritanceEdgesInserted += await batchInsertInheritance(sql, inheritanceSpecs);
+		log(
+			`[xsd:ingest] pass 2: ${stats.inheritanceEdgesInserted} edges (${stats.inheritanceUnresolved} unresolved)`,
+		);
 
 		// Pass 3: content models. Walk every complexType and group declaration,
 		// emit xsd_compositors / xsd_child_edges / xsd_group_edges. Local element
@@ -258,8 +298,16 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 		// xsd_compositors with ON DELETE CASCADE handles child_edges cleanup.
 		// Assumes one source per profile, which holds today; revisit when
 		// multiple sources contribute to the same profile.
+		log("[xsd:ingest] pass 3: walking content models...");
 		await sql`DELETE FROM xsd_compositors WHERE profile_id = ${profileId}`;
 		await sql`DELETE FROM xsd_group_edges WHERE profile_id = ${profileId}`;
+
+		// Compositors stay per-row since their id feeds into nested compositor
+		// parent_compositor_id and into child/group edges. Child/group edges
+		// and local-element memberships are queued and flushed in one shot.
+		const pendingChildEdges: ChildEdgeSpec[] = [];
+		const pendingGroupEdges: GroupEdgeSpec[] = [];
+		const pendingMemberships: MembershipSpec[] = [];
 
 		for (const decls of parseResult.declarationsByQName.values()) {
 			for (const decl of decls) {
@@ -283,6 +331,9 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 					namespaceIds,
 					parseResult,
 					stats,
+					pendingChildEdges,
+					pendingGroupEdges,
+					pendingMemberships,
 				};
 
 				const particleParents = findContentModelParents(decl);
@@ -302,11 +353,23 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 			}
 		}
 
+		await batchInsertChildEdges(sql, pendingChildEdges);
+		await batchInsertGroupEdges(sql, pendingGroupEdges);
+		stats.profileMembershipsInserted += await batchInsertMemberships(sql, pendingMemberships);
+		log(
+			`[xsd:ingest] pass 3: ${stats.compositorsInserted} compositors, ${stats.childEdgesInserted} child edges, ${stats.groupRefsInserted} group refs, ${stats.localElementsCreated} local elements`,
+		);
+
 		// Pass 4: attributes, attributeGroup refs, and simpleType enumerations.
 		// Same delete-and-rewrite strategy as Pass 3. xsd_group_edges already
 		// cleared by Pass 3, so attributeGroup ref inserts here are fresh.
+		log("[xsd:ingest] pass 4: walking attributes and enums...");
 		await sql`DELETE FROM xsd_attr_edges WHERE profile_id = ${profileId}`;
 		await sql`DELETE FROM xsd_enums WHERE profile_id = ${profileId}`;
+
+		const pendingAttrEdges: AttrEdgeSpec[] = [];
+		const pendingAttrGroupEdges: GroupEdgeSpec[] = [];
+		const pendingEnums: EnumSpec[] = [];
 
 		for (const decls of parseResult.declarationsByQName.values()) {
 			for (const decl of decls) {
@@ -325,7 +388,7 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 							const tag = stripPrefixLocal(nodeTagLocal(child));
 							if (tag === "attribute") {
 								await handleAttribute(
-									sql,
+									pendingAttrEdges,
 									child,
 									ownerSymbolId,
 									profileId,
@@ -358,17 +421,16 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 								}
 								// attributeGroup refs don't live inside content compositors;
 								// compositor_id stays null and min/max default to 1.
-								await insertGroupEdge(
-									sql,
-									ownerSymbolId,
-									null,
-									groupSymbolId,
-									profileId,
-									"attributeGroup",
-									1,
-									1,
-									order,
-								);
+								pendingAttrGroupEdges.push({
+									parent_symbol_id: ownerSymbolId,
+									compositor_id: null,
+									group_symbol_id: groupSymbolId,
+									profile_id: profileId,
+									ref_kind: "attributeGroup",
+									min_occurs: 1,
+									max_occurs: 1,
+									order_index: order,
+								});
 								stats.attrGroupRefsInserted++;
 								order++;
 							}
@@ -377,13 +439,25 @@ export async function ingestSchemaSet(opts: IngestSchemaSetOptions): Promise<Ing
 				} else if (decl.kind === "simpleType") {
 					let order = 0;
 					for (const value of findEnumValues(decl)) {
-						await insertEnum(sql, ownerSymbolId, profileId, value, order);
+						pendingEnums.push({
+							symbol_id: ownerSymbolId,
+							profile_id: profileId,
+							value,
+							order_index: order,
+						});
 						stats.enumsInserted++;
 						order++;
 					}
 				}
 			}
 		}
+
+		await batchInsertAttrEdges(sql, pendingAttrEdges);
+		await batchInsertGroupEdges(sql, pendingAttrGroupEdges);
+		await batchInsertEnums(sql, pendingEnums);
+		log(
+			`[xsd:ingest] pass 4: ${stats.attrEdgesInserted} attrs, ${stats.attrGroupRefsInserted} attrGroup refs, ${stats.enumsInserted} enums`,
+		);
 	});
 
 	return stats;
@@ -400,6 +474,10 @@ interface WalkCtx {
 	namespaceIds: Map<string, number>;
 	parseResult: ParsedSchemaSet;
 	stats: IngestStats;
+	// Edge inserts deferred to a single batched flush after the walk.
+	pendingChildEdges: ChildEdgeSpec[];
+	pendingGroupEdges: GroupEdgeSpec[];
+	pendingMemberships: MembershipSpec[];
 }
 
 /**
@@ -537,16 +615,15 @@ async function handleElement(
 			}
 			// Local elements need profile membership too, otherwise
 			// ooxml_lookup_element won't find them in the transitional profile.
+			// Queue for the post-pass batched flush.
 			const nsId = ctx.namespaceIds.get(ctx.ownerDecl.namespace);
 			if (nsId != null) {
-				const linked = await linkSymbolToProfile(
-					ctx.sql,
-					res.id,
-					ctx.profileId,
-					nsId,
-					ctx.sourceId,
-				);
-				if (linked) ctx.stats.profileMembershipsInserted++;
+				ctx.pendingMemberships.push({
+					symbol_id: res.id,
+					profile_id: ctx.profileId,
+					namespace_id: nsId,
+					source_id: ctx.sourceId,
+				});
 			}
 			id = res.id;
 		} else if (typeRef) {
@@ -561,16 +638,15 @@ async function handleElement(
 
 	if (childSymbolId == null) return;
 
-	await insertChildEdge(
-		ctx.sql,
-		ctx.ownerSymbolId,
-		compositorId,
-		childSymbolId,
-		ctx.profileId,
-		parseMinOccurs(a.minOccurs),
-		parseMaxOccurs(a.maxOccurs),
-		orderIndex,
-	);
+	ctx.pendingChildEdges.push({
+		parent_symbol_id: ctx.ownerSymbolId,
+		compositor_id: compositorId,
+		child_symbol_id: childSymbolId,
+		profile_id: ctx.profileId,
+		min_occurs: parseMinOccurs(a.minOccurs),
+		max_occurs: parseMaxOccurs(a.maxOccurs),
+		order_index: orderIndex,
+	});
 	ctx.stats.childEdgesInserted++;
 }
 
@@ -594,17 +670,16 @@ async function handleGroupRef(
 		ctx.stats.groupRefsUnresolved++;
 		return;
 	}
-	await insertGroupEdge(
-		ctx.sql,
-		ctx.ownerSymbolId,
-		compositorId,
-		groupSymbolId,
-		ctx.profileId,
-		"group",
-		parseMinOccurs(a.minOccurs),
-		parseMaxOccurs(a.maxOccurs),
-		orderIndex,
-	);
+	ctx.pendingGroupEdges.push({
+		parent_symbol_id: ctx.ownerSymbolId,
+		compositor_id: compositorId,
+		group_symbol_id: groupSymbolId,
+		profile_id: ctx.profileId,
+		ref_kind: "group",
+		min_occurs: parseMinOccurs(a.minOccurs),
+		max_occurs: parseMaxOccurs(a.maxOccurs),
+		order_index: orderIndex,
+	});
 	ctx.stats.groupRefsInserted++;
 }
 
@@ -622,6 +697,17 @@ function parseMaxOccurs(raw: string | undefined): number | null {
 }
 
 // --- DB helpers ----------------------------------------------------------
+
+// Batched inserts use multi-row VALUES to amortize round-trip latency.
+// Postgres caps query parameters at 65535; chunk size is conservative enough
+// to stay under the limit for the widest row we send (xsd_attr_edges, 9 cols).
+const BATCH_CHUNK = 500;
+
+async function inChunks<T>(items: T[], size: number, fn: (chunk: T[]) => Promise<void>): Promise<void> {
+	for (let i = 0; i < items.length; i += size) {
+		await fn(items.slice(i, i + size));
+	}
+}
 
 async function ensureProfile(sql: Sql, name: string): Promise<number> {
 	const [row] = await sql`
@@ -684,22 +770,6 @@ async function linkSymbolToProfile(
 	return rows.length > 0;
 }
 
-async function insertInheritance(
-	sql: Sql,
-	symbolId: number,
-	baseSymbolId: number,
-	profileId: number,
-	relation: "extension" | "restriction",
-): Promise<boolean> {
-	const rows = await sql`
-		INSERT INTO xsd_inheritance_edges (symbol_id, base_symbol_id, profile_id, relation)
-		VALUES (${symbolId}, ${baseSymbolId}, ${profileId}, ${relation})
-		ON CONFLICT (symbol_id, profile_id) DO NOTHING
-		RETURNING id
-	`;
-	return rows.length > 0;
-}
-
 async function insertCompositor(
 	sql: Sql,
 	parentSymbolId: number | null,
@@ -720,74 +790,149 @@ async function insertCompositor(
 	return row.id;
 }
 
-async function insertChildEdge(
-	sql: Sql,
-	parentSymbolId: number,
-	compositorId: number,
-	childSymbolId: number,
-	profileId: number,
-	minOccurs: number,
-	maxOccurs: number | null,
-	orderIndex: number,
-): Promise<void> {
-	await sql`
-		INSERT INTO xsd_child_edges
-			(parent_symbol_id, compositor_id, child_symbol_id, profile_id, min_occurs, max_occurs, order_index)
-		VALUES
-			(${parentSymbolId}, ${compositorId}, ${childSymbolId}, ${profileId}, ${minOccurs}, ${maxOccurs}, ${orderIndex})
-	`;
+// --- Batched insert helpers ---------------------------------------------
+
+interface SymbolSpec {
+	vocabulary_id: string;
+	local_name: string;
+	kind: string;
+	type_ref: string | null;
+	parent_symbol_id: number | null;
 }
 
-async function insertGroupEdge(
-	sql: Sql,
-	parentSymbolId: number,
-	compositorId: number | null,
-	groupSymbolId: number,
-	profileId: number,
-	refKind: "group" | "attributeGroup",
-	minOccurs: number,
-	maxOccurs: number | null,
-	orderIndex: number,
-): Promise<void> {
-	await sql`
-		INSERT INTO xsd_group_edges
-			(parent_symbol_id, compositor_id, group_symbol_id, profile_id, ref_kind, min_occurs, max_occurs, order_index)
-		VALUES
-			(${parentSymbolId}, ${compositorId}, ${groupSymbolId}, ${profileId}, ${refKind}, ${minOccurs}, ${maxOccurs}, ${orderIndex})
-	`;
+interface SymbolUpsertRow {
+	id: number;
+	vocabulary_id: string;
+	local_name: string;
+	kind: string;
+	parent_symbol_id: number | null;
+	inserted: boolean;
 }
 
-async function insertAttrEdge(
-	sql: Sql,
-	symbolId: number,
-	attrSymbolId: number | null,
-	localName: string,
-	profileId: number,
-	attrUse: "required" | "optional" | "prohibited",
-	defaultValue: string | null,
-	fixedValue: string | null,
-	typeRef: string | null,
-	orderIndex: number,
-): Promise<void> {
-	await sql`
-		INSERT INTO xsd_attr_edges
-			(symbol_id, attr_symbol_id, local_name, profile_id, attr_use, default_value, fixed_value, type_ref, order_index)
-		VALUES
-			(${symbolId}, ${attrSymbolId}, ${localName}, ${profileId}, ${attrUse}, ${defaultValue}, ${fixedValue}, ${typeRef}, ${orderIndex})
-	`;
+async function batchUpsertSymbols(sql: Sql, specs: SymbolSpec[]): Promise<SymbolUpsertRow[]> {
+	const out: SymbolUpsertRow[] = [];
+	await inChunks(specs, BATCH_CHUNK, async (chunk) => {
+		const rows = await sql`
+			INSERT INTO xsd_symbols ${sql(chunk, "vocabulary_id", "local_name", "kind", "type_ref", "parent_symbol_id")}
+			ON CONFLICT ON CONSTRAINT xsd_symbols_canonical_key DO UPDATE
+				SET type_ref = COALESCE(EXCLUDED.type_ref, xsd_symbols.type_ref)
+			RETURNING id, vocabulary_id, local_name, kind, parent_symbol_id, (xmax = 0) AS inserted
+		`;
+		for (const r of rows as SymbolUpsertRow[]) out.push(r);
+	});
+	return out;
 }
 
-async function insertEnum(
-	sql: Sql,
-	symbolId: number,
-	profileId: number,
-	value: string,
-	orderIndex: number,
-): Promise<void> {
-	await sql`
-		INSERT INTO xsd_enums (symbol_id, profile_id, value, order_index)
-		VALUES (${symbolId}, ${profileId}, ${value}, ${orderIndex})
-	`;
+interface MembershipSpec {
+	symbol_id: number;
+	profile_id: number;
+	namespace_id: number;
+	source_id: number;
+}
+
+async function batchInsertMemberships(sql: Sql, specs: MembershipSpec[]): Promise<number> {
+	let inserted = 0;
+	await inChunks(specs, BATCH_CHUNK, async (chunk) => {
+		const rows = await sql`
+			INSERT INTO xsd_symbol_profiles ${sql(chunk, "symbol_id", "profile_id", "namespace_id", "source_id")}
+			ON CONFLICT (symbol_id, profile_id) DO NOTHING
+			RETURNING id
+		`;
+		inserted += rows.length;
+	});
+	return inserted;
+}
+
+interface InheritanceSpec {
+	symbol_id: number;
+	base_symbol_id: number;
+	profile_id: number;
+	relation: "extension" | "restriction";
+}
+
+async function batchInsertInheritance(sql: Sql, specs: InheritanceSpec[]): Promise<number> {
+	let inserted = 0;
+	await inChunks(specs, BATCH_CHUNK, async (chunk) => {
+		const rows = await sql`
+			INSERT INTO xsd_inheritance_edges ${sql(chunk, "symbol_id", "base_symbol_id", "profile_id", "relation")}
+			ON CONFLICT (symbol_id, profile_id) DO NOTHING
+			RETURNING id
+		`;
+		inserted += rows.length;
+	});
+	return inserted;
+}
+
+interface ChildEdgeSpec {
+	parent_symbol_id: number;
+	compositor_id: number;
+	child_symbol_id: number;
+	profile_id: number;
+	min_occurs: number;
+	max_occurs: number | null;
+	order_index: number;
+}
+
+async function batchInsertChildEdges(sql: Sql, specs: ChildEdgeSpec[]): Promise<void> {
+	await inChunks(specs, BATCH_CHUNK, async (chunk) => {
+		await sql`
+			INSERT INTO xsd_child_edges ${sql(chunk, "parent_symbol_id", "compositor_id", "child_symbol_id", "profile_id", "min_occurs", "max_occurs", "order_index")}
+		`;
+	});
+}
+
+interface GroupEdgeSpec {
+	parent_symbol_id: number;
+	compositor_id: number | null;
+	group_symbol_id: number;
+	profile_id: number;
+	ref_kind: "group" | "attributeGroup";
+	min_occurs: number;
+	max_occurs: number | null;
+	order_index: number;
+}
+
+async function batchInsertGroupEdges(sql: Sql, specs: GroupEdgeSpec[]): Promise<void> {
+	await inChunks(specs, BATCH_CHUNK, async (chunk) => {
+		await sql`
+			INSERT INTO xsd_group_edges ${sql(chunk, "parent_symbol_id", "compositor_id", "group_symbol_id", "profile_id", "ref_kind", "min_occurs", "max_occurs", "order_index")}
+		`;
+	});
+}
+
+interface AttrEdgeSpec {
+	symbol_id: number;
+	attr_symbol_id: number | null;
+	local_name: string;
+	profile_id: number;
+	attr_use: "required" | "optional" | "prohibited";
+	default_value: string | null;
+	fixed_value: string | null;
+	type_ref: string | null;
+	order_index: number;
+}
+
+async function batchInsertAttrEdges(sql: Sql, specs: AttrEdgeSpec[]): Promise<void> {
+	await inChunks(specs, BATCH_CHUNK, async (chunk) => {
+		await sql`
+			INSERT INTO xsd_attr_edges ${sql(chunk, "symbol_id", "attr_symbol_id", "local_name", "profile_id", "attr_use", "default_value", "fixed_value", "type_ref", "order_index")}
+		`;
+	});
+}
+
+interface EnumSpec {
+	symbol_id: number;
+	profile_id: number;
+	value: string;
+	order_index: number;
+}
+
+async function batchInsertEnums(sql: Sql, specs: EnumSpec[]): Promise<void> {
+	await inChunks(specs, BATCH_CHUNK, async (chunk) => {
+		await sql`
+			INSERT INTO xsd_enums ${sql(chunk, "symbol_id", "profile_id", "value", "order_index")}
+		`;
+	});
 }
 
 /**
@@ -833,7 +978,7 @@ function findEnumValues(decl: Declaration): string[] {
 }
 
 async function handleAttribute(
-	sql: Sql,
+	pending: AttrEdgeSpec[],
 	node: PreserveOrderNode,
 	ownerSymbolId: number,
 	profileId: number,
@@ -899,18 +1044,17 @@ async function handleAttribute(
 	const attrUse: "required" | "optional" | "prohibited" =
 		rawUse === "required" || rawUse === "optional" || rawUse === "prohibited" ? rawUse : "optional";
 
-	await insertAttrEdge(
-		sql,
-		ownerSymbolId,
-		attrSymbolId,
-		localName,
-		profileId,
-		attrUse,
-		defaultValue,
-		fixedValue,
-		typeRef,
-		orderIndex,
-	);
+	pending.push({
+		symbol_id: ownerSymbolId,
+		attr_symbol_id: attrSymbolId,
+		local_name: localName,
+		profile_id: profileId,
+		attr_use: attrUse,
+		default_value: defaultValue,
+		fixed_value: fixedValue,
+		type_ref: typeRef,
+		order_index: orderIndex,
+	});
 	stats.attrEdgesInserted++;
 }
 
@@ -1008,7 +1152,7 @@ async function main() {
 
 	const t0 = Date.now();
 	try {
-		const stats = await ingestSchemaSet({ ...args, db });
+		const stats = await ingestSchemaSet({ ...args, db, verbose: true });
 		const ms = Date.now() - t0;
 		console.log(`schemaDir:           ${args.schemaDir}`);
 		console.log(`entrypoints:         ${args.entrypoints.join(", ")}`);
