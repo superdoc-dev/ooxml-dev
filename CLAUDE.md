@@ -104,21 +104,21 @@ The XML you provide is wrapped in a minimal `w:document > w:body` structure auto
 
 ## MCP Server
 
-Cloudflare Worker exposing two flavors of MCP tools backed by the same database.
+Cloudflare Worker exposing two tool families over MCP, backed by the same database.
 
-Semantic search over the spec PDF (powered by `spec_content`):
+Prose search over the spec PDFs (powered by `spec_content`):
 
-- `search_ecma_spec` - semantic vector search across 18,000+ spec chunks
-- `get_section` - fetch a specific section by ID (e.g., "17.3.1.24")
-- `list_parts` - browse the spec structure
+- `ooxml_search` - semantic vector search across 18,000+ spec chunks
+- `ooxml_section` - fetch a specific section by ID (e.g., "17.3.1.24")
+- `ooxml_parts` - browse the spec structure
 
 Structural queries over the XSD schema graph (powered by `xsd_*` tables):
 
-- `ooxml_lookup_element` / `ooxml_lookup_type` - canonical symbol info
+- `ooxml_element` / `ooxml_type` - canonical symbol info
 - `ooxml_children` - legal children of an element/type/group, in document order
 - `ooxml_attributes` - attributes including those inherited and unfolded from attributeGroup refs
 - `ooxml_enum` - simpleType enumeration values
-- `ooxml_namespace_info` - vocabularies and per-profile symbol counts for a namespace URI
+- `ooxml_namespace` - vocabularies and per-profile symbol counts for a namespace URI
 
 Uses PostgreSQL with pgvector (Neon serverless in production, Docker locally).
 

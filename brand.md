@@ -52,7 +52,7 @@ The commercial document vendors (Aspose, Syncfusion, TX Text Control, Nutrient) 
 **Structural differentiators**:
 - **Live previews** — Every XML example renders in real-time via SuperDoc. No other OOXML reference shows you what the XML actually produces.
 - **Implementation notes from production** — Not spec commentary. Notes from building a shipping document engine against real-world documents.
-- **AI-native search** — MCP server with semantic vector search across 18,000+ spec chunks. The spec is searchable by meaning, not just keywords.
+- **AI-native reference** — MCP server with two tool families: prose search across 18,000+ spec chunks (ask questions in natural language) and deterministic schema lookup over the parsed XSDs (legal children, attribute lists, enum values, namespaces — exact answers, no hallucination).
 - **Real document corpus** — Backed by docx-corpus (1M+ real documents). Observations are tested against actual documents in the wild, not just spec examples.
 - **Format-first, tool-agnostic** — Useful whether you're building on SuperDoc, Aspose, your own renderer, or just trying to understand a .docx file.
 
@@ -133,7 +133,7 @@ _Use on homepage hero, social bios, link previews._
 
 **Slogans for different contexts**:
 - Developer discovery: "5,000 pages of spec. The 200 that matter. The notes you actually need."
-- AI/MCP context: "Ask the spec anything. Get answers grounded in implementation experience."
+- AI/MCP context: "Ask the spec anything, or query the schema directly. Two tool families, one server."
 - Community pitch: "Hard-won OOXML knowledge, shared freely."
 - SuperDoc connection: "Built by SuperDoc — DOCX editing and tooling. Open to everyone."
 - Credibility: "Every example is a working document."

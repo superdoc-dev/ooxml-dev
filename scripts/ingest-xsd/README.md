@@ -1,6 +1,6 @@
 # XSD ingest (ECMA-376 schema graph)
 
-Builds the structural-query corpus that powers `ooxml_lookup_element`,
+Builds the structural-query corpus that powers `ooxml_element`,
 `ooxml_children`, `ooxml_attributes`, etc. The XSDs published by Ecma
 International for ECMA-376 Transitional are parsed and persisted as a
 profile-scoped relational graph.
