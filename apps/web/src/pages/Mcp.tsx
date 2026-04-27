@@ -29,11 +29,13 @@ const PROSE_TOOLS = [
 const SCHEMA_TOOLS = [
 	{
 		name: "ooxml_element",
-		description: "Look up an OOXML element by qname. Returns vocabulary, namespace, declared @type, and source.",
+		description:
+			"Look up an OOXML element by qname. Returns vocabulary, namespace, declared @type, and source.",
 	},
 	{
 		name: "ooxml_type",
-		description: "Look up a complexType or simpleType by qname. Tries complexType first, then simpleType.",
+		description:
+			"Look up a complexType or simpleType by qname. Tries complexType first, then simpleType.",
 	},
 	{
 		name: "ooxml_children",
