@@ -1,7 +1,5 @@
 /**
- * Read-only structural MCP tools backed by the OOXML schema graph. Gated by
- * ENABLE_OOXML_TOOLS, which filters both tools/list discovery and tools/call
- * dispatch so the public surface stays unchanged until the flag is set.
+ * Read-only structural MCP tools backed by the OOXML schema graph.
  *
  * Tools:
  *   ooxml_lookup_element, ooxml_lookup_type, ooxml_children,
@@ -33,12 +31,6 @@ export const DEFAULT_PROFILE = "transitional";
 
 export interface OoxmlEnv {
 	DATABASE_URL: string;
-	ENABLE_OOXML_TOOLS?: string;
-}
-
-export function ooxmlToolsEnabled(env: OoxmlEnv): boolean {
-	const v = env.ENABLE_OOXML_TOOLS;
-	return v === "true" || v === "1";
 }
 
 export const OOXML_TOOL_DEFS = [
@@ -215,13 +207,7 @@ export async function runOoxmlTool(
 				} else if (!elementSym) {
 					// Fall back to looking for a named xsd:group with this qname (so
 					// EG_PContent and friends are reachable directly).
-					typeSym = await lookupSymbol(
-						sql,
-						q.qname.namespace,
-						q.qname.localName,
-						"group",
-						profile,
-					);
+					typeSym = await lookupSymbol(sql, q.qname.namespace, q.qname.localName, "group", profile);
 				}
 			}
 			if (!typeSym) {

@@ -105,15 +105,15 @@ The XML you provide is wrapped in a minimal `w:document > w:body` structure auto
 
 ## MCP Server
 
-Cloudflare Worker exposing two flavors of MCP tools backed by the same database:
+Cloudflare Worker exposing two flavors of MCP tools backed by the same database.
 
-Always-on (semantic search over the spec PDF):
+Semantic search over the spec PDF (powered by `spec_content`):
 
 - `search_ecma_spec` - semantic vector search across 18,000+ spec chunks
 - `get_section` - fetch a specific section by ID (e.g., "17.3.1.24")
 - `list_parts` - browse the spec structure
 
-Behind `ENABLE_OOXML_TOOLS` (structural queries over the XSD schema graph):
+Structural queries over the XSD schema graph (powered by `xsd_*` tables):
 
 - `ooxml_lookup_element` / `ooxml_lookup_type` - canonical symbol info
 - `ooxml_children` - legal children of an element/type/group, in document order

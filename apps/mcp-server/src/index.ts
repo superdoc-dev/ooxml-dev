@@ -16,13 +16,6 @@ import { handleMcpRequest } from "./mcp";
 export interface Env {
 	DATABASE_URL: string;
 	VOYAGE_API_KEY: string;
-	/**
-	 * Feature flag for the OOXML structural tools. Set to "true" to expose
-	 * ooxml_lookup_element / ooxml_lookup_type / ooxml_children /
-	 * ooxml_attributes / ooxml_enum / ooxml_namespace_info via tools/list
-	 * and tools/call. Default off.
-	 */
-	ENABLE_OOXML_TOOLS?: string;
 }
 
 // Part descriptions

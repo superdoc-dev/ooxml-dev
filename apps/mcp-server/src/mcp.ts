@@ -7,7 +7,7 @@
 import { createDb } from "./db";
 import { embedQuery } from "./embeddings";
 import type { Env } from "./index";
-import { callOoxmlTool, isOoxmlTool, OOXML_TOOL_DEFS, ooxmlToolsEnabled } from "./ooxml-tools";
+import { callOoxmlTool, isOoxmlTool, OOXML_TOOL_DEFS } from "./ooxml-tools";
 
 // JSON-RPC types
 interface JsonRpcRequest {
@@ -133,12 +133,11 @@ function handleInitialize(id: number | string | null): JsonRpcResponse {
 	};
 }
 
-function handleToolsList(id: number | string | null, env: Env): JsonRpcResponse {
-	const tools = ooxmlToolsEnabled(env) ? [...TOOLS, ...OOXML_TOOL_DEFS] : TOOLS;
+function handleToolsList(id: number | string | null): JsonRpcResponse {
 	return {
 		jsonrpc: "2.0",
 		id,
-		result: { tools },
+		result: { tools: [...TOOLS, ...OOXML_TOOL_DEFS] },
 	};
 }
 
@@ -162,17 +161,9 @@ async function handleToolsCall(
 	try {
 		let resultText: string;
 
-		// OOXML tools are feature-flagged; tools/list filters them out when the flag
-		// is off, so callers should not see these tool names. Defensive check here in
-		// case a caller hand-crafts a request.
+		// Structural OOXML tools share the dispatch with the existing semantic
+		// tools below.
 		if (isOoxmlTool(name)) {
-			if (!ooxmlToolsEnabled(env)) {
-				return {
-					jsonrpc: "2.0",
-					id,
-					error: { code: METHOD_NOT_FOUND, message: `Unknown tool: ${name}` },
-				};
-			}
 			resultText = await callOoxmlTool(name, args ?? {}, env);
 			return {
 				jsonrpc: "2.0",
@@ -393,7 +384,7 @@ export async function handleMcpRequest(request: Request, env: Env): Promise<Resp
 			return new Response(null, { status: 202 });
 
 		case "tools/list":
-			return jsonResponse(handleToolsList(id, env));
+			return jsonResponse(handleToolsList(id));
 
 		case "tools/call":
 			return jsonResponse(await handleToolsCall(id, body.params, env));
