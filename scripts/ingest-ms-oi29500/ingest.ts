@@ -247,9 +247,18 @@ async function main() {
 		const sourceCommit = parsed.frontmatter.git_commit_id ?? null;
 
 		// Resolve once per page (the symbol context is the same across claims).
+		// target_ref is always populated, even on resolved rows. Migration 0006
+		// changed `behavior_notes.symbol_id` FK to ON DELETE SET NULL, so a
+		// future xsd:ingest will null out symbol_id on attached rows. Without a
+		// target_ref to fall back on, those notes become unreachable via
+		// ooxml_behavior(qname=...) until a full ms:ingest re-runs. Keeping
+		// target_ref populated restores the qname word-boundary fallback.
 		let resolutionSymbolId: number | null = null;
 		let resolutionConfidence: "high" | "medium" | "low" | null = null;
-		let targetRef: string | null = null;
+		const targetRef =
+			ecmaSection && name
+				? `Section ${ecmaSection}, ${name}`
+				: `Section ${ecmaSection ?? "?"}, ${name ?? "?"}`;
 
 		if (ecmaSection && name) {
 			const outcome = resolveSymbol(map, name, ecmaSection, partNumber);
@@ -259,13 +268,11 @@ async function main() {
 				if (outcome.isLocal) stats.resolvedLocal++;
 				else stats.resolvedTopLevel++;
 			} else {
-				targetRef = outcome.targetRef;
 				if (outcome.reason === "no-vocabulary") stats.unresolvedNoVocab++;
 				else if (outcome.reason === "no-match") stats.unresolvedNoMatch++;
 				else if (outcome.reason === "ambiguous") stats.unresolvedAmbiguous++;
 			}
 		} else {
-			targetRef = `Section ${ecmaSection ?? "?"}, ${name ?? "?"}`;
 			stats.unresolvedNoVocab++;
 		}
 

@@ -124,7 +124,7 @@ export default {
 									await writer.write(encoder.encode(":keepalive\n\n"));
 								}
 							} catch {
-								// Client disconnected — stream closed
+								// Client disconnected - stream closed
 							}
 						})(),
 					);

@@ -40,7 +40,7 @@ export function inferApp(
 	}
 
 	if (partNumber === 4) {
-		// Part 4 is the Transitional Migration spec — VML and legacy DrawingML
+		// Part 4 is the Transitional Migration spec - VML and legacy DrawingML
 		// extensions used across multiple apps. Tag generic.
 		return "Office";
 	}
@@ -59,7 +59,7 @@ export function inferApp(
 			return "PowerPoint"; // PML elements (Part 1)
 		case 20:
 		case 21:
-			return "Office"; // DrawingML — used by all three apps
+			return "Office"; // DrawingML - used by all three apps
 		case 22: {
 			// 22.1 = math (Word); 22.2-22.x = shared / extended properties.
 			const sub = ecmaSection.match(/^22\.(\d+)/);

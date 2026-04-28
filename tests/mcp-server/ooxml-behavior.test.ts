@@ -145,7 +145,7 @@ test("ooxml_behavior qname=tbl matches target_ref but excludes textBox / tblPr",
 	const out = await runOoxmlTool("ooxml_behavior", { qname: "w:tbl" }, db.sql);
 	// The 'tbl' unresolved note should match (target_ref = "Section 17.4.37, tbl").
 	expect(out).toContain("Word handles tbl differently");
-	// But NOT the tblPr or textBox notes — word-boundary regex prevents the
+	// But NOT the tblPr or textBox notes - word-boundary regex prevents the
 	// substring false positive.
 	expect(out).not.toContain("Word handles tblPr differently");
 	expect(out).not.toContain("Excel does not support textBox");

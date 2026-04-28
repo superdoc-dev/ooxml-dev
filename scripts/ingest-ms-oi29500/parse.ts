@@ -160,7 +160,7 @@ function extractVersionScope(text: string): string {
 }
 
 /**
- * Find lettered claim headers in the body. The shape is `^[a-z]\. \*...\*` —
+ * Find lettered claim headers in the body. The shape is `^[a-z]\. \*...\*` -
  * the italic spec text may span lines (markdown rewraps), so we accept any
  * content up to the next blank line.
  */
@@ -251,7 +251,7 @@ function extractBehaviorBullets(slice: string): ParsedBehavior[] {
 		}
 		if (isVersionScopeMarker(joined)) {
 			// Attach scope to the previous behavior. If there is no previous
-			// behavior (rare: scope-only claim), drop it — there's no row for it
+			// behavior (rare: scope-only claim), drop it - there's no row for it
 			// to belong to. Real corpus has not exhibited this case.
 			const scope = extractVersionScope(joined);
 			if (bullets.length > 0) {

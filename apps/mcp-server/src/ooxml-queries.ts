@@ -18,6 +18,8 @@ type Sql = any;
  */
 const COMMON_PREFIXES: Record<string, string> = {
 	w: "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+	x: "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+	p: "http://schemas.openxmlformats.org/presentationml/2006/main",
 	r: "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
 	s: "http://schemas.openxmlformats.org/officeDocument/2006/sharedTypes",
 	m: "http://schemas.openxmlformats.org/officeDocument/2006/math",
@@ -70,7 +72,7 @@ export function parseQName(raw: string): QNameParseResult {
 	if (!namespace) {
 		return {
 			ok: false,
-			reason: `unknown prefix '${prefix}'. Use a known prefix (w, r, s, m, a, wp, pic, c, dgm), or Clark form {namespace}localName.`,
+			reason: `unknown prefix '${prefix}'. Use a known prefix (w, x, p, r, s, m, a, wp, pic, c, dgm), or Clark form {namespace}localName.`,
 		};
 	}
 	return { ok: true, qname: { namespace, localName, rawPrefix: prefix } };
@@ -730,13 +732,18 @@ export async function fetchBehaviorNotes(
 	let symbolIds: number[] | null = null;
 	if (filter.symbolName) {
 		const ns = filter.symbolNamespace ?? DEFAULT_NAMESPACE;
+		// Same profile-scoped pattern as lookupSymbol et al. so we don't pull
+		// symbol IDs from a future profile (e.g. strict) when behavior_notes
+		// only attach to transitional rows.
 		const symRows = await sql`
 			SELECT DISTINCT s.id
 			FROM xsd_symbols s
 			JOIN xsd_symbol_profiles sp ON sp.symbol_id = s.id
 			JOIN xsd_namespaces ns ON ns.id = sp.namespace_id
+			JOIN xsd_profiles p ON p.id = sp.profile_id
 			WHERE s.local_name = ${filter.symbolName}
 			  AND ns.uri = ${ns}
+			  AND p.name = ${"transitional"}
 		`;
 		// biome-ignore lint/suspicious/noExplicitAny: row shape is loose.
 		symbolIds = (symRows as any[]).map((r) => r.id as number);

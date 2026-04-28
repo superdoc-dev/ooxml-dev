@@ -72,7 +72,7 @@ export async function loadSymbolMap(sql: Sql): Promise<SymbolMap> {
  * the first hit in this list.
  *
  * Part 4 (Transitional Migration Features) is VML / legacy and not in our
- * ingested XSD set — every Part 4 page maps to no vocabulary, producing a
+ * ingested XSD set - every Part 4 page maps to no vocabulary, producing a
  * target_ref instead of a wrong symbol attachment.
  *
  * Part 1 sections 13 (PML) and 18 (SML) are also outside the current XSD
@@ -89,16 +89,16 @@ function inferVocabularies(partNumber: number | null, section: string): string[]
 
 	switch (major) {
 		case 13:
-			return []; // PresentationML — not ingested
+			return []; // PresentationML - not ingested
 		case 14:
 		case 15:
 			return []; // VML
 		case 17:
 			return ["wml-main"];
 		case 18:
-			return []; // SpreadsheetML — not ingested
+			return []; // SpreadsheetML - not ingested
 		case 19:
-			return []; // PresentationML — not ingested
+			return []; // PresentationML - not ingested
 		case 20:
 			return ["dml-main", "dml-pic", "dml-wp", "shared-types"];
 		case 21:

@@ -125,7 +125,7 @@ export const OOXML_TOOL_DEFS: ToolDef[] = [
 	{
 		name: "ooxml_behavior",
 		description:
-			"Look up implementation behavior notes (currently from MS-OI29500: Microsoft Office Implementation Information for ISO/IEC 29500). Returns 'spec says X / Word does Y' divergence claims. Filter by element/type qname, MS section ID (e.g. '17.4.37' or '2.1.149'), source page GUID, free-text query, app (Word/Excel/PowerPoint/Office), or claim_type. At least one filter is required. Most MS-OI29500 entries attach to local element decls and are reachable only through this tool — not via ooxml_element.",
+			"Look up implementation behavior notes (currently from MS-OI29500: Microsoft Office Implementation Information for ISO/IEC 29500). Returns 'spec says X / Word does Y' divergence claims. Filter by element/type qname, MS section ID (e.g. '17.4.37' or '2.1.149'), source page GUID, free-text query, app (Word/Excel/PowerPoint/Office), or claim_type. At least one filter is required. Most MS-OI29500 entries attach to local element decls and are reachable only through this tool - not via ooxml_element.",
 		inputSchema: {
 			type: "object" as const,
 			properties: {
@@ -338,12 +338,12 @@ export async function runOoxmlTool(
 					"## Missing filter",
 					"",
 					"`ooxml_behavior` needs at least one of:",
-					"- `qname` — element/type name like 'w:tbl' or 'CT_Tbl'",
-					"- `section_id` — substring like '17.4.37' or '2.1.149'",
-					"- `source_anchor` — MS-OI29500 page GUID",
-					"- `query` — free-text search",
-					"- `app` — 'Word', 'Excel', 'PowerPoint', or 'Office'",
-					"- `claim_type` — e.g. 'does_not_support', 'varies_from_spec'",
+					"- `qname` - element/type name like 'w:tbl' or 'CT_Tbl'",
+					"- `section_id` - substring like '17.4.37' or '2.1.149'",
+					"- `source_anchor` - MS-OI29500 page GUID",
+					"- `query` - free-text search",
+					"- `app` - 'Word', 'Excel', 'PowerPoint', or 'Office'",
+					"- `claim_type` - e.g. 'does_not_support', 'varies_from_spec'",
 				].join("\n");
 			}
 			const notes = await fetchBehaviorNotes(sql, filter);
@@ -416,7 +416,7 @@ function appendBehaviorSection(lines: string[], notes: BehaviorNote[]): void {
 	for (const [_anchor, group] of byAnchor) {
 		const first = group[0];
 		const heading = first.sectionId ? `${first.sectionId}` : (first.sourceAnchor ?? "(no anchor)");
-		const src = first.sourceName ? ` — ${first.sourceName}` : "";
+		const src = first.sourceName ? ` - ${first.sourceName}` : "";
 		lines.push(`### ${heading}${src}`);
 		const url = buildNoteUrl(first.sourceName, first.sourceAnchor);
 		if (url) lines.push(`(${url})`);
@@ -452,7 +452,7 @@ function formatBehaviorReport(
 	if (filter.query) filterDesc.push(`query="${filter.query}"`);
 	if (filter.app) filterDesc.push(`app=${filter.app}`);
 	if (filter.claimType) filterDesc.push(`claim_type=${filter.claimType}`);
-	lines.push(`## Behavior notes — ${filterDesc.join(", ")}`);
+	lines.push(`## Behavior notes - ${filterDesc.join(", ")}`);
 	lines.push("");
 	if (notes.length === 0) {
 		lines.push("_no matching behavior notes._");
