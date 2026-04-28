@@ -31,6 +31,10 @@ interface ObservationSpec {
 	afterXml: string | null;
 	links: Array<{
 		sourceAnchor: string;
+		/** Letter of the specific sub-claim on the page (a, b, c, ...). MS-OI29500
+		 *  pages can have multiple claim groups; without this, a link defaults to
+		 *  claim 'a' and may end up tagging the wrong sub-claim. */
+		claimLabel: string;
 		status: "confirmed" | "refined" | "contradicted" | "not_reproducible";
 		notes: string | null;
 	}>;
@@ -83,10 +87,11 @@ const OBSERVATIONS: ObservationSpec[] = [
 			"Word emits <w:b/> on every bold run including the cs/rtl Arabic runs. It does NOT emit <w:bCs/>. Word reads <w:b/> and renders Arabic bold from this file.",
 		beforeXml: null,
 		afterXml: '<w:r><w:rPr><w:rFonts w:hint="cs"/><w:b/><w:rtl/></w:rPr><w:t>النص</w:t></w:r>',
-		// Anchors of MS-OI29500 §17.3.2.1 / .2 / .16 / .17 (b / bCs / i / iCs notes).
+		// MS-OI29500 §17.3.2.1, sub-claim a (the only claim on the b/bold page).
 		links: [
 			{
 				sourceAnchor: "03b9695f-fd69-435d-90e6-b1069aadf291",
+				claimLabel: "a",
 				status: "contradicted",
 				notes:
 					"Note describes a read rule (w:b applies only to non-cs/non-rtl runs) but Word's actual read+write paths apply w:b to cs/rtl runs too. Implementers should not gate complex-script bold on w:bCs alone.",
@@ -101,10 +106,12 @@ const OBSERVATIONS: ObservationSpec[] = [
 		beforeXml: null,
 		afterXml:
 			'<w:cols w:num="3" w:space="288" w:equalWidth="0"><w:col w:w="3600" w:space="432"/><w:col w:w="2592" w:space="432"/><w:col w:w="1728" w:space="720"/></w:cols>',
-		// MS-OI29500 §17.6.4 (cols num/equalWidth).
+		// MS-OI29500 §17.6.4 (cols), sub-claim c: "Word requires that the value
+		// of the num attribute matches the number of child col elements."
 		links: [
 			{
 				sourceAnchor: "ef7027d4-e05d-473b-8777-dcc2aee91935",
+				claimLabel: "c",
 				status: "confirmed",
 				notes: null,
 			},
@@ -117,10 +124,14 @@ const OBSERVATIONS: ObservationSpec[] = [
 			'Word strips the entire <w:trHeight> element (and the now-empty <w:trPr> parent) on save. The doc says Word "requires val != 0"; Word\'s actual repair path is to drop the directive entirely rather than reject the file or coerce val to a positive number.',
 		beforeXml: '<w:trPr><w:trHeight w:hRule="exact" w:val="0"/></w:trPr>',
 		afterXml: "(no <w:trPr> on the row)",
-		// MS-OI29500 §17.4.80 (trHeight val with hRule=exact).
+		// MS-OI29500 §17.4.80 (trHeight), sub-claim c: "Word requires that if
+		// the hRule attribute is set to exact, then the val attribute must not
+		// be 0." (Sub-claim a covers the hRule-omitted default; sub-claim b
+		// covers the val datatype.)
 		links: [
 			{
 				sourceAnchor: "5919e0bd-e6ce-477e-8d66-0e5282f5c506",
+				claimLabel: "c",
 				status: "refined",
 				notes:
 					"Direction is correct (Word doesn't keep val=0 with hRule=exact) but Word's enforcement is silent removal, not validation failure. SuperDoc parsers should expect the trHeight to disappear during a Word round-trip.",
@@ -134,10 +145,11 @@ const OBSERVATIONS: ObservationSpec[] = [
 			"Across 28 <w:rPr> blocks under <w:style> in styles.xml, Word emits zero of the disallowed children (cs, highlight, oMath, rPrChange, rStyle, rtl). Confirms the documented restriction.",
 		beforeXml: null,
 		afterXml: "(no disallowed children in any of 28 inspected style rPr blocks)",
-		// MS-OI29500 §17.7.6.2 (rPr children in style definitions).
+		// MS-OI29500 §17.7.6.2 (rPr children in style definitions), single claim a.
 		links: [
 			{
 				sourceAnchor: "d0244b61-fd96-45f0-ac84-7380d2b6d663",
+				claimLabel: "a",
 				status: "confirmed",
 				notes: null,
 			},
@@ -178,10 +190,15 @@ async function findOrInsertObservation(
 	return row.id;
 }
 
-async function findNoteId(sql: Sql, sourceAnchor: string): Promise<number | null> {
+async function findNoteId(
+	sql: Sql,
+	sourceAnchor: string,
+	claimLabel: string,
+): Promise<number | null> {
 	const rows = await sql<Array<{ id: number }>>`
 		SELECT id FROM behavior_notes
-		WHERE source_anchor = ${sourceAnchor} AND claim_label = 'a'
+		WHERE source_anchor = ${sourceAnchor}
+		  AND claim_label = ${claimLabel}
 		ORDER BY claim_index
 		LIMIT 1
 	`;
@@ -225,16 +242,21 @@ async function main() {
 		if (!fixtureId) throw new Error(`Unknown fixture ${o.fixtureName}`);
 		const obsId = await findOrInsertObservation(db.sql, fixtureId, o);
 		console.log(`  observation [${o.fixtureName}/${o.scenario}] → id=${obsId}`);
+		// Remove any prior links for this observation so a re-seed with corrected
+		// claimLabels doesn't leave stale join rows pointing at the wrong claim.
+		await db.sql`DELETE FROM behavior_note_observations WHERE observation_id = ${obsId}`;
 
 		for (const link of o.links) {
-			const noteId = await findNoteId(db.sql, link.sourceAnchor);
+			const noteId = await findNoteId(db.sql, link.sourceAnchor, link.claimLabel);
 			if (noteId === null) {
-				console.log(`    SKIP link: no behavior_note for source_anchor=${link.sourceAnchor}`);
+				console.log(
+					`    SKIP link: no behavior_note for source_anchor=${link.sourceAnchor} claim=${link.claimLabel}`,
+				);
 				linksSkipped++;
 				continue;
 			}
 			await linkNoteObservation(db.sql, noteId, obsId, link.status, link.notes);
-			console.log(`    link → note=${noteId} status=${link.status}`);
+			console.log(`    link → note=${noteId} (${link.claimLabel}) status=${link.status}`);
 			linksCreated++;
 		}
 	}

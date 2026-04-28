@@ -786,6 +786,9 @@ export async function fetchWordObservations(
 ): Promise<WordObservation[]> {
 	const limit = filter.limit ?? 30;
 	const queryPattern = filter.query ? `%${filter.query}%` : null;
+	// Status filter has to apply BEFORE the LIMIT — otherwise an old
+	// confirmed observation can be excluded by the limit when newer
+	// unstatused observations sit ahead of it. Use an EXISTS join.
 	const obsRows = await sql`
 		SELECT obs.id, obs.fixture_id, obs.scenario, obs.finding,
 		       obs.before_xml, obs.after_xml, obs.observed_at,
@@ -798,6 +801,12 @@ export async function fetchWordObservations(
 		       OR obs.finding ILIKE ${queryPattern}
 		       OR obs.before_xml ILIKE ${queryPattern}
 		       OR obs.after_xml ILIKE ${queryPattern})
+		  AND (${filter.status ?? null}::text IS NULL
+		       OR EXISTS (
+		           SELECT 1 FROM behavior_note_observations bno
+		           WHERE bno.observation_id = obs.id
+		             AND bno.status = ${filter.status ?? null}
+		       ))
 		ORDER BY obs.observed_at DESC
 		LIMIT ${limit}
 	`;
@@ -812,7 +821,6 @@ export async function fetchWordObservations(
 		FROM behavior_note_observations bno
 		LEFT JOIN behavior_notes bn ON bn.id = bno.behavior_note_id
 		WHERE bno.observation_id = ANY(${obsIds}::int[])
-		  AND (${filter.status ?? null}::text IS NULL OR bno.status = ${filter.status ?? null})
 		ORDER BY bno.observation_id
 	`;
 	const byObs = new Map<number, WordObservation["linkedNotes"]>();
@@ -829,26 +837,18 @@ export async function fetchWordObservations(
 		});
 	}
 
-	// If the caller filtered by status, drop observations that ended up with
-	// no linked notes after the join.
-	const out: WordObservation[] = [];
-	for (const r of observations) {
-		const linked = byObs.get(r.id as number) ?? [];
-		if (filter.status && linked.length === 0) continue;
-		out.push({
-			id: r.id as number,
-			fixtureId: r.fixture_id as number | null,
-			fixtureName: r.fixture_name as string | null,
-			wordVersion: r.word_version as string | null,
-			scenario: r.scenario as string,
-			finding: r.finding as string,
-			beforeXml: r.before_xml as string | null,
-			afterXml: r.after_xml as string | null,
-			observedAt: r.observed_at as string,
-			linkedNotes: linked,
-		});
-	}
-	return out;
+	return observations.map((r) => ({
+		id: r.id as number,
+		fixtureId: r.fixture_id as number | null,
+		fixtureName: r.fixture_name as string | null,
+		wordVersion: r.word_version as string | null,
+		scenario: r.scenario as string,
+		finding: r.finding as string,
+		beforeXml: r.before_xml as string | null,
+		afterXml: r.after_xml as string | null,
+		observedAt: r.observed_at as string,
+		linkedNotes: byObs.get(r.id as number) ?? [],
+	}));
 }
 
 export interface BehaviorNoteFilter {

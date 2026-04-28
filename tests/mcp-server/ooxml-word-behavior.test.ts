@@ -204,6 +204,30 @@ test("ooxml_implementation_notes inlines verification status", async () => {
 	expect(out).toContain("Word emits CT_Para with the whitespace");
 });
 
+test("ooxml_word_behavior status filter respects LIMIT (regression)", async () => {
+	// Insert 3 newer observations with no linked status. With limit=2 and
+	// status='confirmed', the buggy implementation would return 0 because the
+	// limit-applied-pre-status would only see the 3 unstatused ones.
+	const [fixId] = await db.sql<Array<{ id: number }>>`
+		INSERT INTO word_fixtures (name, description) VALUES ('limit-test', 'noise')
+		RETURNING id
+	`;
+	for (let i = 0; i < 3; i++) {
+		await db.sql`
+			INSERT INTO word_observations (fixture_id, scenario, finding)
+			VALUES (${fixId.id}, 'noise', ${`noise observation ${i}`})
+		`;
+	}
+	const out = await runOoxmlTool(
+		"ooxml_word_behavior",
+		{ status: "confirmed", limit: 2 },
+		db.sql,
+	);
+	// Should still find the original confirmed observation despite the noise.
+	expect(out).toContain("[confirmed]");
+	expect(out).toContain("Word emits CT_Para");
+});
+
 test("ooxml_implementation_notes flags unverified rows", async () => {
 	// Insert a third note with no observation.
 	await db.sql`
