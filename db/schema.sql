@@ -215,11 +215,56 @@ CREATE TABLE behavior_notes (
 
 -- Natural-key unique index for upserting imported rows. claim_index encodes
 -- (claimIdx * 100 + behaviorIdx) at ingest time so it's unique per
--- (source, page) — claim_label is shared across behaviors in a single claim
+-- (source, page) - claim_label is shared across behaviors in a single claim
 -- group and would collide here.
 CREATE UNIQUE INDEX idx_behavior_notes_natural_key
   ON behavior_notes (source_id, source_anchor, claim_index)
   WHERE source_id IS NOT NULL AND source_anchor IS NOT NULL;
+
+-- ----------------------------------------------------------------------------
+-- Verification layer: ground-truth observations from authored Word fixtures.
+--
+-- behavior_notes are claims Microsoft has DOCUMENTED. Word's actual behavior
+-- can confirm, refine, contradict, or fail to reproduce them. word_fixtures
+-- + word_observations + behavior_note_observations capture that ground
+-- truth so the MCP can rank verified rows above unverified ones.
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE word_fixtures (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  sha256 TEXT,
+  generator_script TEXT,
+  word_version TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE word_observations (
+  id SERIAL PRIMARY KEY,
+  fixture_id INT REFERENCES word_fixtures(id) ON DELETE CASCADE,
+  scenario TEXT NOT NULL,
+  finding TEXT NOT NULL,
+  before_xml TEXT,
+  after_xml TEXT,
+  observed_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE behavior_note_observations (
+  id SERIAL PRIMARY KEY,
+  behavior_note_id INT NOT NULL REFERENCES behavior_notes(id) ON DELETE CASCADE,
+  observation_id INT NOT NULL REFERENCES word_observations(id) ON DELETE CASCADE,
+  status TEXT NOT NULL CHECK (status IN (
+    'confirmed', 'refined', 'contradicted', 'not_reproducible'
+  )),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (behavior_note_id, observation_id)
+);
+
+CREATE INDEX idx_word_observations_fixture ON word_observations(fixture_id);
+CREATE INDEX idx_behavior_note_observations_note ON behavior_note_observations(behavior_note_id);
+CREATE INDEX idx_behavior_note_observations_obs ON behavior_note_observations(observation_id);
 
 CREATE INDEX idx_xsd_symbols_lookup ON xsd_symbols(vocabulary_id, local_name, kind);
 CREATE INDEX idx_xsd_symbols_parent ON xsd_symbols(parent_symbol_id);

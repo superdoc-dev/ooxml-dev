@@ -697,6 +697,160 @@ export async function fetchBehaviorNotesBySymbol(
 	return (rows as any[]).map(rowToBehaviorNote);
 }
 
+// --- word_observations / verification layer ---------------------------------
+
+export interface NoteVerification {
+	noteId: number;
+	status: "confirmed" | "refined" | "contradicted" | "not_reproducible";
+	observationFinding: string;
+	scenario: string;
+	fixtureName: string | null;
+	wordVersion: string | null;
+	beforeXml: string | null;
+	afterXml: string | null;
+	notes: string | null;
+}
+
+/** Fetch the latest verification per note for a list of note ids. Notes
+ *  without any observation simply don't appear in the result. */
+export async function fetchVerifications(
+	sql: Sql,
+	noteIds: number[],
+): Promise<Map<number, NoteVerification>> {
+	const map = new Map<number, NoteVerification>();
+	if (noteIds.length === 0) return map;
+	const rows = await sql`
+		SELECT DISTINCT ON (bno.behavior_note_id)
+			bno.behavior_note_id AS note_id,
+			bno.status,
+			bno.notes,
+			obs.scenario,
+			obs.finding,
+			obs.before_xml,
+			obs.after_xml,
+			fix.name AS fixture_name,
+			fix.word_version
+		FROM behavior_note_observations bno
+		JOIN word_observations obs ON obs.id = bno.observation_id
+		LEFT JOIN word_fixtures fix ON fix.id = obs.fixture_id
+		WHERE bno.behavior_note_id = ANY(${noteIds}::int[])
+		ORDER BY bno.behavior_note_id, bno.created_at DESC
+	`;
+	// biome-ignore lint/suspicious/noExplicitAny: row shape is loose.
+	for (const r of rows as any[]) {
+		map.set(r.note_id as number, {
+			noteId: r.note_id as number,
+			status: r.status as NoteVerification["status"],
+			observationFinding: r.finding as string,
+			scenario: r.scenario as string,
+			fixtureName: r.fixture_name as string | null,
+			wordVersion: r.word_version as string | null,
+			beforeXml: r.before_xml as string | null,
+			afterXml: r.after_xml as string | null,
+			notes: r.notes as string | null,
+		});
+	}
+	return map;
+}
+
+export interface WordObservation {
+	id: number;
+	fixtureId: number | null;
+	fixtureName: string | null;
+	wordVersion: string | null;
+	scenario: string;
+	finding: string;
+	beforeXml: string | null;
+	afterXml: string | null;
+	observedAt: string;
+	linkedNotes: Array<{
+		noteId: number;
+		status: NoteVerification["status"];
+		notes: string | null;
+		sectionId: string | null;
+		sourceAnchor: string | null;
+	}>;
+}
+
+export interface WordObservationFilter {
+	fixtureName?: string;
+	scenario?: string;
+	query?: string;
+	status?: string;
+	limit?: number;
+}
+
+export async function fetchWordObservations(
+	sql: Sql,
+	filter: WordObservationFilter,
+): Promise<WordObservation[]> {
+	const limit = filter.limit ?? 30;
+	const queryPattern = filter.query ? `%${filter.query}%` : null;
+	const obsRows = await sql`
+		SELECT obs.id, obs.fixture_id, obs.scenario, obs.finding,
+		       obs.before_xml, obs.after_xml, obs.observed_at,
+		       fix.name AS fixture_name, fix.word_version
+		FROM word_observations obs
+		LEFT JOIN word_fixtures fix ON fix.id = obs.fixture_id
+		WHERE (${filter.fixtureName ?? null}::text IS NULL OR fix.name = ${filter.fixtureName ?? null})
+		  AND (${filter.scenario ?? null}::text IS NULL OR obs.scenario = ${filter.scenario ?? null})
+		  AND (${queryPattern}::text IS NULL
+		       OR obs.finding ILIKE ${queryPattern}
+		       OR obs.before_xml ILIKE ${queryPattern}
+		       OR obs.after_xml ILIKE ${queryPattern})
+		ORDER BY obs.observed_at DESC
+		LIMIT ${limit}
+	`;
+	// biome-ignore lint/suspicious/noExplicitAny: row shape is loose.
+	const observations = obsRows as any[];
+	if (observations.length === 0) return [];
+
+	const obsIds = observations.map((r) => r.id as number);
+	const linkRows = await sql`
+		SELECT bno.observation_id, bno.behavior_note_id, bno.status, bno.notes,
+		       bn.section_id, bn.source_anchor
+		FROM behavior_note_observations bno
+		LEFT JOIN behavior_notes bn ON bn.id = bno.behavior_note_id
+		WHERE bno.observation_id = ANY(${obsIds}::int[])
+		  AND (${filter.status ?? null}::text IS NULL OR bno.status = ${filter.status ?? null})
+		ORDER BY bno.observation_id
+	`;
+	const byObs = new Map<number, WordObservation["linkedNotes"]>();
+	// biome-ignore lint/suspicious/noExplicitAny: row shape is loose.
+	for (const r of linkRows as any[]) {
+		const oid = r.observation_id as number;
+		if (!byObs.has(oid)) byObs.set(oid, []);
+		byObs.get(oid)?.push({
+			noteId: r.behavior_note_id as number,
+			status: r.status as NoteVerification["status"],
+			notes: r.notes as string | null,
+			sectionId: r.section_id as string | null,
+			sourceAnchor: r.source_anchor as string | null,
+		});
+	}
+
+	// If the caller filtered by status, drop observations that ended up with
+	// no linked notes after the join.
+	const out: WordObservation[] = [];
+	for (const r of observations) {
+		const linked = byObs.get(r.id as number) ?? [];
+		if (filter.status && linked.length === 0) continue;
+		out.push({
+			id: r.id as number,
+			fixtureId: r.fixture_id as number | null,
+			fixtureName: r.fixture_name as string | null,
+			wordVersion: r.word_version as string | null,
+			scenario: r.scenario as string,
+			finding: r.finding as string,
+			beforeXml: r.before_xml as string | null,
+			afterXml: r.after_xml as string | null,
+			observedAt: r.observed_at as string,
+			linkedNotes: linked,
+		});
+	}
+	return out;
+}
+
 export interface BehaviorNoteFilter {
 	/** Resolve a qname to a name+namespace and find notes on top-level OR
 	 *  local xsd_symbols rows with that (vocabulary, name). */

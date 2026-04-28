@@ -22,6 +22,9 @@ let map: SymbolMap;
 
 const TRUNCATE_SQL = `
 	TRUNCATE
+		behavior_note_observations,
+		word_observations,
+		word_fixtures,
 		behavior_notes,
 		xsd_enums,
 		xsd_inheritance_edges,

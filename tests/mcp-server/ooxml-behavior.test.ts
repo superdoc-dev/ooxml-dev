@@ -22,6 +22,9 @@ let msSourceId: number;
 
 const TRUNCATE_SQL = `
 	TRUNCATE
+		behavior_note_observations,
+		word_observations,
+		word_fixtures,
 		behavior_notes,
 		xsd_enums,
 		xsd_inheritance_edges,
@@ -134,7 +137,7 @@ afterAll(async () => {
 });
 
 test("ooxml_behavior with no filters returns the missing-filter error", async () => {
-	const out = await runOoxmlTool("ooxml_behavior", {}, db.sql);
+	const out = await runOoxmlTool("ooxml_implementation_notes", {}, db.sql);
 	expect(out).toContain("Missing filter");
 	expect(out).toContain("section_id");
 	// Must NOT include the schema-tool fallback hint that's irrelevant here.
@@ -142,7 +145,7 @@ test("ooxml_behavior with no filters returns the missing-filter error", async ()
 });
 
 test("ooxml_behavior qname=tbl matches target_ref but excludes textBox / tblPr", async () => {
-	const out = await runOoxmlTool("ooxml_behavior", { qname: "w:tbl" }, db.sql);
+	const out = await runOoxmlTool("ooxml_implementation_notes", { qname: "w:tbl" }, db.sql);
 	// The 'tbl' unresolved note should match (target_ref = "Section 17.4.37, tbl").
 	expect(out).toContain("Word handles tbl differently");
 	// But NOT the tblPr or textBox notes - word-boundary regex prevents the
@@ -152,27 +155,27 @@ test("ooxml_behavior qname=tbl matches target_ref but excludes textBox / tblPr",
 });
 
 test("ooxml_behavior qname=textBox doesn't pull tbl-related notes", async () => {
-	const out = await runOoxmlTool("ooxml_behavior", { qname: "w:textBox" }, db.sql);
+	const out = await runOoxmlTool("ooxml_implementation_notes", { qname: "w:textBox" }, db.sql);
 	expect(out).not.toContain("Word handles tbl differently");
 	expect(out).not.toContain("Word handles tblPr differently");
 });
 
 test("ooxml_behavior qname=text picks up the local-symbol note", async () => {
-	const out = await runOoxmlTool("ooxml_behavior", { qname: "w:text" }, db.sql);
+	const out = await runOoxmlTool("ooxml_implementation_notes", { qname: "w:text" }, db.sql);
 	expect(out).toContain("Word does not support nested text runs");
 	// Must not also pull the unrelated tbl/textBox/tblPr unresolved notes.
 	expect(out).not.toContain("Word handles tbl differently");
 });
 
 test("ooxml_behavior section_id substring matches", async () => {
-	const out = await runOoxmlTool("ooxml_behavior", { section_id: "17.3.1.22" }, db.sql);
+	const out = await runOoxmlTool("ooxml_implementation_notes", { section_id: "17.3.1.22" }, db.sql);
 	expect(out).toContain("Word emits CT_Para");
 	expect(out).toContain("Word does not support nested text runs");
 });
 
 test("ooxml_behavior source_anchor exact match", async () => {
 	const out = await runOoxmlTool(
-		"ooxml_behavior",
+		"ooxml_implementation_notes",
 		{ source_anchor: "guid-para" },
 		db.sql,
 	);
@@ -181,19 +184,19 @@ test("ooxml_behavior source_anchor exact match", async () => {
 });
 
 test("ooxml_behavior app filter is exact", async () => {
-	const excelOnly = await runOoxmlTool("ooxml_behavior", { app: "Excel" }, db.sql);
+	const excelOnly = await runOoxmlTool("ooxml_implementation_notes", { app: "Excel" }, db.sql);
 	expect(excelOnly).toContain("Excel does not support textBox");
 	expect(excelOnly).not.toContain("Word emits CT_Para");
 });
 
 test("ooxml_behavior claim_type filter is exact", async () => {
-	const out = await runOoxmlTool("ooxml_behavior", { claim_type: "writes" }, db.sql);
+	const out = await runOoxmlTool("ooxml_implementation_notes", { claim_type: "writes" }, db.sql);
 	expect(out).toContain("Word emits CT_Para");
 	expect(out).not.toContain("Word does not support nested text runs");
 });
 
 test("ooxml_behavior renders a working per-note URL (not the broken landing-guid form)", async () => {
-	const out = await runOoxmlTool("ooxml_behavior", { source_anchor: "guid-para" }, db.sql);
+	const out = await runOoxmlTool("ooxml_implementation_notes", { source_anchor: "guid-para" }, db.sql);
 	expect(out).toContain(
 		"https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/guid-para",
 	);
@@ -229,7 +232,7 @@ test("ooxml_type w:ST_Jc inlines a behavior note when one is attached", async ()
 	`;
 	const out = await runOoxmlTool("ooxml_type", { qname: "w:ST_Jc" }, db.sql);
 	expect(out).toContain("SimpleType: ST_Jc");
-	expect(out).toContain("Behavior notes (1)");
+	expect(out).toContain("Documented behavior notes (1");
 	expect(out).toContain("Word renders both differently");
 	expect(out).toContain(
 		"https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/guid-st-jc",

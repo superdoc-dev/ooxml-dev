@@ -18,6 +18,8 @@ import {
 	type EnumEntry,
 	fetchBehaviorNotes,
 	fetchBehaviorNotesBySymbol,
+	fetchVerifications,
+	fetchWordObservations,
 	getAttributes,
 	getChildren,
 	getEnums,
@@ -27,8 +29,10 @@ import {
 	lookupSymbolByTypeRef,
 	lookupType,
 	type NamespaceInfo,
+	type NoteVerification,
 	parseQName,
 	type SymbolHit,
+	type WordObservation,
 } from "./ooxml-queries";
 
 export const DEFAULT_PROFILE = "transitional";
@@ -123,9 +127,9 @@ export const OOXML_TOOL_DEFS: ToolDef[] = [
 		},
 	},
 	{
-		name: "ooxml_behavior",
+		name: "ooxml_implementation_notes",
 		description:
-			"Look up implementation behavior notes (currently from MS-OI29500: Microsoft Office Implementation Information for ISO/IEC 29500). Returns 'spec says X / Word does Y' divergence claims. Filter by element/type qname, MS section ID (e.g. '17.4.37' or '2.1.149'), source page GUID, free-text query, app (Word/Excel/PowerPoint/Office), or claim_type. At least one filter is required. Most MS-OI29500 entries attach to local element decls and are reachable only through this tool - not via ooxml_element.",
+			"Microsoft-documented Office implementation notes from MS-OI29500. These are claims Microsoft has published about how Word / Excel / PowerPoint diverge from the spec — they are NOT necessarily verified against the live Word binary. Each row carries a citation back to its source page; some rows also carry linked observations (see ooxml_word_behavior) that confirm, refine, or contradict the claim against an authored fixture. Filter by element/type qname, MS section ID (e.g. '17.4.37' or '2.1.149'), source page GUID, free-text query, app, or claim_type. At least one filter is required. Most entries attach to local element decls and are reachable only through this tool, not via ooxml_element.",
 		inputSchema: {
 			type: "object" as const,
 			properties: {
@@ -161,6 +165,34 @@ export const OOXML_TOOL_DEFS: ToolDef[] = [
 			},
 		},
 	},
+	{
+		name: "ooxml_word_behavior",
+		description:
+			"Ground-truth observations of how Word ACTUALLY behaves, captured from authored Word fixtures (not Microsoft's documented claims). Each observation records a 'before' and 'after' XML fragment plus a finding string, and is optionally linked to one or more documented notes from ooxml_implementation_notes with a status (confirmed / refined / contradicted / not_reproducible). Use this when you need verified facts rather than documented intent. Filter by fixture name, scenario, free-text query, or verification status.",
+		inputSchema: {
+			type: "object" as const,
+			properties: {
+				fixture_name: {
+					type: "string",
+					description: "Exact fixture name, e.g. 'arabic-bold-test'.",
+				},
+				scenario: {
+					type: "string",
+					description: "Scenario tag, e.g. 'authored', 'open-and-save', 'open-and-render'.",
+				},
+				query: {
+					type: "string",
+					description: "Free-text search across the finding and the before/after XML fragments.",
+				},
+				status: {
+					type: "string",
+					description:
+						"Filter to observations linked to a note with this status: 'confirmed', 'refined', 'contradicted', 'not_reproducible'.",
+				},
+				limit: { type: "number", description: "Max results (default 30)." },
+			},
+		},
+	},
 ];
 
 export type OoxmlToolName =
@@ -170,7 +202,8 @@ export type OoxmlToolName =
 	| "ooxml_attributes"
 	| "ooxml_enum"
 	| "ooxml_namespace"
-	| "ooxml_behavior";
+	| "ooxml_implementation_notes"
+	| "ooxml_word_behavior";
 
 const OOXML_TOOL_NAMES: ReadonlySet<string> = new Set(OOXML_TOOL_DEFS.map((t) => t.name));
 
@@ -219,7 +252,11 @@ export async function runOoxmlTool(
 				);
 			}
 			const notes = await fetchBehaviorNotesBySymbol(sql, hit.id);
-			return formatSymbolReport("Element", hit, profile, notes);
+			const verifications = await fetchVerifications(
+				sql,
+				notes.map((n) => n.id),
+			);
+			return formatSymbolReport("Element", hit, profile, notes, verifications);
 		}
 
 		case "ooxml_type": {
@@ -233,11 +270,16 @@ export async function runOoxmlTool(
 				);
 			}
 			const notes = await fetchBehaviorNotesBySymbol(sql, hit.id);
+			const verifications = await fetchVerifications(
+				sql,
+				notes.map((n) => n.id),
+			);
 			return formatSymbolReport(
 				hit.kind === "simpleType" ? "SimpleType" : "ComplexType",
 				hit,
 				profile,
 				notes,
+				verifications,
 			);
 		}
 
@@ -310,7 +352,10 @@ export async function runOoxmlTool(
 			return formatNamespaceReport(info);
 		}
 
-		case "ooxml_behavior": {
+		case "ooxml_implementation_notes": {
+			// fall through to existing handler logic; verifications are fetched
+			// after the notes query so we can render the [confirmed]/[refined]/etc
+			// badges in the dedicated tool's output too.
 			const filter: Parameters<typeof fetchBehaviorNotes>[1] = {
 				app: args.app as string | undefined,
 				claimType: args.claim_type as string | undefined,
@@ -337,7 +382,7 @@ export async function runOoxmlTool(
 				return [
 					"## Missing filter",
 					"",
-					"`ooxml_behavior` needs at least one of:",
+					"`ooxml_implementation_notes` needs at least one of:",
 					"- `qname` - element/type name like 'w:tbl' or 'CT_Tbl'",
 					"- `section_id` - substring like '17.4.37' or '2.1.149'",
 					"- `source_anchor` - MS-OI29500 page GUID",
@@ -347,7 +392,23 @@ export async function runOoxmlTool(
 				].join("\n");
 			}
 			const notes = await fetchBehaviorNotes(sql, filter);
-			return formatBehaviorReport(notes, filter, qname);
+			const verifications = await fetchVerifications(
+				sql,
+				notes.map((n) => n.id),
+			);
+			return formatBehaviorReport(notes, filter, qname, verifications);
+		}
+
+		case "ooxml_word_behavior": {
+			const filter: Parameters<typeof fetchWordObservations>[1] = {
+				fixtureName: args.fixture_name as string | undefined,
+				scenario: args.scenario as string | undefined,
+				query: args.query as string | undefined,
+				status: args.status as string | undefined,
+				limit: args.limit as number | undefined,
+			};
+			const obs = await fetchWordObservations(sql, filter);
+			return formatObservationsReport(obs, filter);
 		}
 
 		default: {
@@ -364,6 +425,7 @@ function formatSymbolReport(
 	hit: SymbolHit,
 	profile: string,
 	notes: BehaviorNote[] = [],
+	verifications: Map<number, NoteVerification> = new Map(),
 ): string {
 	const lines: string[] = [];
 	lines.push(`## ${label}: ${hit.localName}`);
@@ -377,7 +439,7 @@ function formatSymbolReport(
 	if (hit.sourceName) lines.push(`- source: ${hit.sourceName}`);
 	if (notes.length > 0) {
 		lines.push("");
-		appendBehaviorSection(lines, notes);
+		appendBehaviorSection(lines, notes, verifications);
 	}
 	return lines.join("\n");
 }
@@ -400,12 +462,21 @@ function buildNoteUrl(sourceName: string | null, anchor: string | null): string 
 }
 
 /**
- * Append a "Behavior notes" section to a structural report. Groups by source
- * page (source_anchor) so multiple claims from the same MS-OI29500 entry stay
- * together.
+ * Append a "Documented behavior notes" section to a structural report. These
+ * are claims Microsoft has documented; rows linked to a Word fixture
+ * observation get a [confirmed] / [refined] / [contradicted] /
+ * [not_reproducible] tag, otherwise [unverified].
  */
-function appendBehaviorSection(lines: string[], notes: BehaviorNote[]): void {
-	lines.push(`## Behavior notes (${notes.length})`);
+function appendBehaviorSection(
+	lines: string[],
+	notes: BehaviorNote[],
+	verifications: Map<number, NoteVerification>,
+): void {
+	lines.push(`## Documented behavior notes (${notes.length}, MS-OI29500)`);
+	lines.push("");
+	lines.push(
+		"_Microsoft-documented claims. Rows tagged [unverified] have not been checked against authored Word fixtures; use ooxml_word_behavior to see which ones are._",
+	);
 	lines.push("");
 	const byAnchor = new Map<string, BehaviorNote[]>();
 	for (const n of notes) {
@@ -423,10 +494,18 @@ function appendBehaviorSection(lines: string[], notes: BehaviorNote[]): void {
 		for (const n of group) {
 			const labelTag = n.claimLabel ? `${n.claimLabel}.` : "-";
 			const scopeTag = n.versionScope ? ` _scope: ${n.versionScope}_` : "";
+			const v = verifications.get(n.id);
+			const verifyTag = v ? `[${v.status}]` : "[unverified]";
 			if (n.standardText) lines.push(`${labelTag} *${n.standardText}*`);
-			if (n.behaviorText)
-				lines.push(`    - ${n.behaviorText} \`(${n.app}, ${n.claimType})\`${scopeTag}`);
-			else lines.push(`    - ${n.summary} \`(${n.app}, ${n.claimType})\`${scopeTag}`);
+			const claim = n.behaviorText ?? n.summary;
+			lines.push(`    - ${claim} \`(${n.app}, ${n.claimType})\` ${verifyTag}${scopeTag}`);
+			if (v) {
+				lines.push(`      observation: ${v.observationFinding}`);
+				if (v.fixtureName) {
+					const wv = v.wordVersion ? `, ${v.wordVersion}` : "";
+					lines.push(`      fixture: ${v.fixtureName}${wv}`);
+				}
+			}
 		}
 		lines.push("");
 	}
@@ -443,6 +522,7 @@ function formatBehaviorReport(
 		claimType?: string;
 	},
 	qname: string | undefined,
+	verifications: Map<number, NoteVerification> = new Map(),
 ): string {
 	const lines: string[] = [];
 	const filterDesc: string[] = [];
@@ -452,13 +532,55 @@ function formatBehaviorReport(
 	if (filter.query) filterDesc.push(`query="${filter.query}"`);
 	if (filter.app) filterDesc.push(`app=${filter.app}`);
 	if (filter.claimType) filterDesc.push(`claim_type=${filter.claimType}`);
-	lines.push(`## Behavior notes - ${filterDesc.join(", ")}`);
+	lines.push(`## Documented implementation notes (MS-OI29500) - ${filterDesc.join(", ")}`);
 	lines.push("");
 	if (notes.length === 0) {
-		lines.push("_no matching behavior notes._");
+		lines.push("_no matching notes._");
 		return lines.join("\n");
 	}
-	appendBehaviorSection(lines, notes);
+	appendBehaviorSection(lines, notes, verifications);
+	return lines.join("\n");
+}
+
+function formatObservationsReport(
+	observations: WordObservation[],
+	filter: { fixtureName?: string; scenario?: string; query?: string; status?: string },
+): string {
+	const filterDesc: string[] = [];
+	if (filter.fixtureName) filterDesc.push(`fixture=${filter.fixtureName}`);
+	if (filter.scenario) filterDesc.push(`scenario=${filter.scenario}`);
+	if (filter.query) filterDesc.push(`query="${filter.query}"`);
+	if (filter.status) filterDesc.push(`status=${filter.status}`);
+	const lines: string[] = [];
+	lines.push(`## Word observations (ground truth) - ${filterDesc.join(", ") || "all"}`);
+	lines.push("");
+	if (observations.length === 0) {
+		lines.push("_no matching observations._");
+		return lines.join("\n");
+	}
+	lines.push(
+		"_Each observation is a finding from an authored Word fixture. Linked notes carry a verification status: confirmed / refined / contradicted / not_reproducible._",
+	);
+	lines.push("");
+	for (const o of observations) {
+		const fix = o.fixtureName
+			? `${o.fixtureName}${o.wordVersion ? ` (${o.wordVersion})` : ""}`
+			: "(no fixture)";
+		lines.push(`### ${fix} - ${o.scenario}`);
+		lines.push(`Finding: ${o.finding}`);
+		if (o.beforeXml) lines.push(`\nBefore:\n\`\`\`xml\n${o.beforeXml}\n\`\`\``);
+		if (o.afterXml) lines.push(`\nAfter:\n\`\`\`xml\n${o.afterXml}\n\`\`\``);
+		if (o.linkedNotes.length > 0) {
+			lines.push("");
+			lines.push("Linked notes:");
+			for (const ln of o.linkedNotes) {
+				const cite = ln.sectionId ?? `note ${ln.noteId}`;
+				const note = ln.notes ? ` - ${ln.notes}` : "";
+				lines.push(`  - [${ln.status}] ${cite}${note}`);
+			}
+		}
+		lines.push("");
+	}
 	return lines.join("\n");
 }
 
