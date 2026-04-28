@@ -6,7 +6,7 @@
 import { join } from "node:path";
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createDbClient, type DbClient } from "../../packages/shared/src/db/index.ts";
-import { ingestSchemaSet } from "../../scripts/ingest-xsd/ingest.ts";
+import { ingestSchemaSet } from "../../scripts/ingest-ecma-376-xsds/ingest.ts";
 import {
 	getAttributes,
 	getChildren,
@@ -18,7 +18,7 @@ import {
 	parseQName,
 } from "../../apps/mcp-server/src/ooxml-queries.ts";
 
-const FIXTURES_DIR = join(import.meta.dir, "..", "ingest-xsd", "fixtures");
+const FIXTURES_DIR = join(import.meta.dir, "..", "ingest-ecma-376-xsds", "fixtures");
 import { getTestDatabaseUrl } from "../test-db.ts";
 
 const databaseUrl = getTestDatabaseUrl();

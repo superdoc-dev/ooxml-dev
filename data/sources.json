@@ -45,6 +45,16 @@
       "url": "https://ecma-international.org/wp-content/uploads/ECMA-376-4_5th_edition_december_2016.zip",
       "license_note": "Published by Ecma International. See the ECMA-376 publications page for the current download and licensing terms before redistribution.",
       "sha256": "bd25da1109f73762356596918bf5ff8b74a1331642dba5f1c1d1dfc6bed34ecd"
+    },
+    {
+      "$comment": "MS-OI29500 is ingested from Microsoft Learn's native markdown endpoint (`?accept=text/markdown`) per Phase 0 evaluation. The pinned PDF URL is for citation/provenance; not parsed. version = published revision ID; edition = revision date.",
+      "name": "ms-oi29500",
+      "kind": "open_spec",
+      "edition": "2025-02-18",
+      "version": "23.0",
+      "url": "https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/1fd4a662-8623-49c0-82f0-18fa91b413b8",
+      "license_note": "Microsoft Open Specifications Documentation copyright notice permits copies for implementing the technologies described, and distribution of portions in implementations or accompanying documentation. Pinned per-doc PDF: https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/MS-OI29500/%5bMS-OI29500%5d.pdf. Bundle (all MS Office Open Specs PDFs): https://officeprotocoldocs-f5hpbjgea6b8gneq.b02.azurefd.net/files/Zip_Files/MSOFFSTAND.zip — useful for future expansion to MS-DOCX et al.",
+      "sha256": "2212feb8506cd0399835427d971f14fd0b38257769339076c565343f8704e4ca"
     }
   ]
 }

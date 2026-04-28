@@ -613,3 +613,171 @@ export async function getNamespaceInfo(sql: Sql, uri: string): Promise<Namespace
 	}
 	return { uri, vocabularies: [...vocabSet].sort(), profiles };
 }
+
+// --- behavior_notes helpers --------------------------------------------------
+//
+// Imported (MS-OI29500) and curated rows live in `behavior_notes`. The MCP
+// tools surface them in two ways:
+//   - Inline on `ooxml_element` / `ooxml_type` / `ooxml_attributes` for any
+//     symbol_id that matches an inline lookup. Limited reach (top-level only).
+//   - Via the dedicated `ooxml_behavior` tool which looks up by name across
+//     top-level AND local symbols, by section_id, source_anchor, or text
+//     query. Required for ~94% of MS-OI29500 since most matches are local.
+
+export interface BehaviorNote {
+	id: number;
+	symbolId: number | null;
+	app: string;
+	versionScope: string | null;
+	claimType: string;
+	summary: string;
+	standardText: string | null;
+	behaviorText: string | null;
+	confidence: string | null;
+	resolutionConfidence: string | null;
+	sectionId: string | null;
+	sourceAnchor: string | null;
+	sourceCommit: string | null;
+	targetRef: string | null;
+	claimLabel: string | null;
+	sourceName: string | null;
+	sourceUrl: string | null;
+}
+
+/** Escape regex metacharacters for safe interpolation into a `~` pattern. */
+function escapeRegex(s: string): string {
+	return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: tagged-template sql differs between drivers.
+function rowToBehaviorNote(r: any): BehaviorNote {
+	return {
+		id: r.id as number,
+		symbolId: r.symbol_id as number | null,
+		app: r.app as string,
+		versionScope: r.version_scope as string | null,
+		claimType: r.claim_type as string,
+		summary: r.summary as string,
+		standardText: r.standard_text as string | null,
+		behaviorText: r.behavior_text as string | null,
+		confidence: r.confidence as string | null,
+		resolutionConfidence: r.resolution_confidence as string | null,
+		sectionId: r.section_id as string | null,
+		sourceAnchor: r.source_anchor as string | null,
+		sourceCommit: r.source_commit as string | null,
+		targetRef: r.target_ref as string | null,
+		claimLabel: r.claim_label as string | null,
+		sourceName: r.source_name as string | null,
+		sourceUrl: r.source_url as string | null,
+	};
+}
+
+/**
+ * Inline integration: fetch all behavior notes attached to a specific
+ * `xsd_symbols` row. Used by the structural tools to append a "behavior"
+ * section after the schema info.
+ */
+export async function fetchBehaviorNotesBySymbol(
+	sql: Sql,
+	symbolId: number,
+): Promise<BehaviorNote[]> {
+	const rows = await sql`
+		SELECT bn.id, bn.symbol_id, bn.app, bn.version_scope, bn.claim_type, bn.summary,
+		       bn.standard_text, bn.behavior_text, bn.confidence, bn.resolution_confidence,
+		       bn.section_id, bn.source_anchor, bn.source_commit, bn.target_ref, bn.claim_label,
+		       src.name AS source_name, src.url AS source_url
+		FROM behavior_notes bn
+		LEFT JOIN reference_sources src ON src.id = bn.source_id
+		WHERE bn.symbol_id = ${symbolId}
+		ORDER BY bn.source_id, bn.source_anchor, bn.claim_index
+	`;
+	// biome-ignore lint/suspicious/noExplicitAny: row shape is loose.
+	return (rows as any[]).map(rowToBehaviorNote);
+}
+
+export interface BehaviorNoteFilter {
+	/** Resolve a qname to a name+namespace and find notes on top-level OR
+	 *  local xsd_symbols rows with that (vocabulary, name). */
+	symbolName?: string;
+	symbolNamespace?: string;
+	/** Substring match on bn.section_id (e.g. '17.4.37' or '2.1.149'). */
+	sectionId?: string;
+	/** Exact match on bn.source_anchor. */
+	sourceAnchor?: string;
+	/** Free-text ILIKE search across standard_text + behavior_text + summary. */
+	query?: string;
+	app?: string;
+	claimType?: string;
+	limit?: number;
+}
+
+/**
+ * Dedicated-tool integration: flexible filter that handles the common
+ * `ooxml_behavior` query patterns. At least one of (symbolName, sectionId,
+ * sourceAnchor, query) should be set; the SQL tolerates all-null but will
+ * return everything in that case (LIMIT-bounded).
+ */
+export async function fetchBehaviorNotes(
+	sql: Sql,
+	filter: BehaviorNoteFilter,
+): Promise<BehaviorNote[]> {
+	const limit = filter.limit ?? 50;
+	const queryPattern = filter.query ? `%${filter.query}%` : null;
+	const sectionPattern = filter.sectionId ? `%${filter.sectionId}%` : null;
+	// Resolve symbolName → set of xsd_symbols.id (top-level + local). When no
+	// name is given we look at all rows; the IN-list trick uses an empty array
+	// fallback so the optional-name case works.
+	let symbolIds: number[] | null = null;
+	if (filter.symbolName) {
+		const ns = filter.symbolNamespace ?? DEFAULT_NAMESPACE;
+		const symRows = await sql`
+			SELECT DISTINCT s.id
+			FROM xsd_symbols s
+			JOIN xsd_symbol_profiles sp ON sp.symbol_id = s.id
+			JOIN xsd_namespaces ns ON ns.id = sp.namespace_id
+			WHERE s.local_name = ${filter.symbolName}
+			  AND ns.uri = ${ns}
+		`;
+		// biome-ignore lint/suspicious/noExplicitAny: row shape is loose.
+		symbolIds = (symRows as any[]).map((r) => r.id as number);
+		if (symbolIds.length === 0) symbolIds = [-1]; // no match → empty result
+	}
+
+	// Word-boundary regex for the unresolved-notes fallback. ILIKE substring
+	// match would let qname=foo pull in notes whose target_ref says "foobar".
+	// MS-OI29500 names are all word-chars (letters/digits/underscore); we
+	// require a non-word-char (or string boundary) on either side.
+	const targetRefPattern = filter.symbolName
+		? `(^|[^A-Za-z0-9_])${escapeRegex(filter.symbolName)}([^A-Za-z0-9_]|$)`
+		: null;
+
+	const rows = await sql`
+		SELECT bn.id, bn.symbol_id, bn.app, bn.version_scope, bn.claim_type, bn.summary,
+		       bn.standard_text, bn.behavior_text, bn.confidence, bn.resolution_confidence,
+		       bn.section_id, bn.source_anchor, bn.source_commit, bn.target_ref, bn.claim_label,
+		       src.name AS source_name, src.url AS source_url
+		FROM behavior_notes bn
+		LEFT JOIN reference_sources src ON src.id = bn.source_id
+		WHERE
+		  -- name filter: either symbol_id matches, OR target_ref mentions the
+		  -- name with a non-word-char delimiter on each side (so 'tbl' doesn't
+		  -- match 'tblPr').
+		  (${symbolIds === null}::boolean
+		    OR bn.symbol_id = ANY(${symbolIds ?? []}::int[])
+		    OR (${targetRefPattern}::text IS NOT NULL
+		        AND bn.target_ref IS NOT NULL
+		        AND bn.target_ref ~ ${targetRefPattern}))
+		  AND (${sectionPattern}::text IS NULL OR bn.section_id ILIKE ${sectionPattern})
+		  AND (${filter.sourceAnchor ?? null}::text IS NULL OR bn.source_anchor = ${filter.sourceAnchor ?? null})
+		  AND (${queryPattern}::text IS NULL
+		       OR bn.standard_text ILIKE ${queryPattern}
+		       OR bn.behavior_text ILIKE ${queryPattern}
+		       OR bn.summary ILIKE ${queryPattern})
+		  AND (${filter.app ?? null}::text IS NULL OR bn.app = ${filter.app ?? null})
+		  AND (${filter.claimType ?? null}::text IS NULL OR bn.claim_type = ${filter.claimType ?? null})
+		ORDER BY bn.source_id, bn.source_anchor, bn.claim_index
+		LIMIT ${limit}
+	`;
+	// biome-ignore lint/suspicious/noExplicitAny: row shape is loose.
+	return (rows as any[]).map(rowToBehaviorNote);
+}

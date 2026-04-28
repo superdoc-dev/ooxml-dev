@@ -33,10 +33,11 @@ apps/
 packages/
   shared/              Database client, embedding client, types
 scripts/
-  ingest-pdf/          ECMA PDF -> spec_content (semantic search corpus)
-  ingest-xsd/          ECMA XSDs -> schema graph (structural query corpus)
-  sources-sync.ts      data/sources.json -> reference_sources
-  db-migrate.ts        Apply db/migrations/*.sql in order
+  ingest-ecma-376-pdfs/   ECMA-376 PDFs -> spec_content (semantic search corpus)
+  ingest-ecma-376-xsds/   ECMA-376 XSDs -> schema graph (structural query corpus)
+  ingest-ms-oi29500/      MS-OI29500 Learn pages -> behavior_notes (Word/Office implementation behavior)
+  sources-sync.ts         data/sources.json -> reference_sources
+  db-migrate.ts           Apply db/migrations/*.sql in order
 db/
   schema.sql           PostgreSQL + pgvector + XSD schema graph
   migrations/          Numbered, idempotent SQL migrations
@@ -136,7 +137,7 @@ PDF → extract (Python) → chunk (6KB) → embed (Voyage) → upload (PostgreS
 bun run pdf:ingest 1 ./pdfs/ECMA-376-Part1.pdf   # full pipeline for one part
 ```
 
-See `scripts/ingest-pdf/README.md`.
+See `scripts/ingest-ecma-376-pdfs/README.md`.
 
 **XSD (structural corpus, into `xsd_*` tables)**:
 
@@ -149,7 +150,7 @@ bun run xsd:fetch                                    # URL + sha256 from data/so
 bun run xsd:ingest
 ```
 
-See `scripts/ingest-xsd/README.md`.
+See `scripts/ingest-ecma-376-xsds/README.md`.
 
 ## Database
 

@@ -13,8 +13,11 @@ import { neon } from "@neondatabase/serverless";
 import type { ToolDef } from "./mcp";
 import {
 	type AttrEntry,
+	type BehaviorNote,
 	type ChildEdge,
 	type EnumEntry,
+	fetchBehaviorNotes,
+	fetchBehaviorNotesBySymbol,
 	getAttributes,
 	getChildren,
 	getEnums,
@@ -119,6 +122,45 @@ export const OOXML_TOOL_DEFS: ToolDef[] = [
 			required: ["uri"],
 		},
 	},
+	{
+		name: "ooxml_behavior",
+		description:
+			"Look up implementation behavior notes (currently from MS-OI29500: Microsoft Office Implementation Information for ISO/IEC 29500). Returns 'spec says X / Word does Y' divergence claims. Filter by element/type qname, MS section ID (e.g. '17.4.37' or '2.1.149'), source page GUID, free-text query, app (Word/Excel/PowerPoint/Office), or claim_type. At least one filter is required. Most MS-OI29500 entries attach to local element decls and are reachable only through this tool — not via ooxml_element.",
+		inputSchema: {
+			type: "object" as const,
+			properties: {
+				qname: {
+					type: "string",
+					description:
+						"Element/type qname like 'w:tbl' or 'CT_Tbl'. Searches behavior notes attached to top-level OR local symbols with this name, plus notes whose target_ref mentions it.",
+				},
+				section_id: {
+					type: "string",
+					description:
+						"Substring of bn.section_id, e.g. '17.4.37' (ECMA section) or '2.1.149' (MS-OI29500 entry id).",
+				},
+				source_anchor: {
+					type: "string",
+					description: "MS-OI29500 page GUID (exact match).",
+				},
+				query: {
+					type: "string",
+					description:
+						"Free-text ILIKE search across the standard text, the Word-behavior text, and the rendered summary.",
+				},
+				app: {
+					type: "string",
+					description: "Filter by app: 'Word', 'Excel', 'PowerPoint', or 'Office'.",
+				},
+				claim_type: {
+					type: "string",
+					description:
+						"Filter by claim_type: ignores, requires_despite_optional, writes, reads_but_does_not_write, repairs, layout_behavior, does_not_support, varies_from_spec.",
+				},
+				limit: { type: "number", description: "Max results (default 50)." },
+			},
+		},
+	},
 ];
 
 export type OoxmlToolName =
@@ -127,7 +169,8 @@ export type OoxmlToolName =
 	| "ooxml_children"
 	| "ooxml_attributes"
 	| "ooxml_enum"
-	| "ooxml_namespace";
+	| "ooxml_namespace"
+	| "ooxml_behavior";
 
 const OOXML_TOOL_NAMES: ReadonlySet<string> = new Set(OOXML_TOOL_DEFS.map((t) => t.name));
 
@@ -175,7 +218,8 @@ export async function runOoxmlTool(
 					profile,
 				);
 			}
-			return formatSymbolReport("Element", hit, profile);
+			const notes = await fetchBehaviorNotesBySymbol(sql, hit.id);
+			return formatSymbolReport("Element", hit, profile, notes);
 		}
 
 		case "ooxml_type": {
@@ -188,10 +232,12 @@ export async function runOoxmlTool(
 					profile,
 				);
 			}
+			const notes = await fetchBehaviorNotesBySymbol(sql, hit.id);
 			return formatSymbolReport(
 				hit.kind === "simpleType" ? "SimpleType" : "ComplexType",
 				hit,
 				profile,
+				notes,
 			);
 		}
 
@@ -264,6 +310,46 @@ export async function runOoxmlTool(
 			return formatNamespaceReport(info);
 		}
 
+		case "ooxml_behavior": {
+			const filter: Parameters<typeof fetchBehaviorNotes>[1] = {
+				app: args.app as string | undefined,
+				claimType: args.claim_type as string | undefined,
+				sourceAnchor: args.source_anchor as string | undefined,
+				sectionId: args.section_id as string | undefined,
+				query: args.query as string | undefined,
+				limit: args.limit as number | undefined,
+			};
+			const qname = args.qname as string | undefined;
+			if (qname) {
+				const q = parseQName(qname);
+				if (!q.ok) return formatNotFound(`could not parse qname: ${q.reason}`);
+				filter.symbolName = q.qname.localName;
+				filter.symbolNamespace = q.qname.namespace;
+			}
+			if (
+				!filter.symbolName &&
+				!filter.sectionId &&
+				!filter.sourceAnchor &&
+				!filter.query &&
+				!filter.app &&
+				!filter.claimType
+			) {
+				return [
+					"## Missing filter",
+					"",
+					"`ooxml_behavior` needs at least one of:",
+					"- `qname` — element/type name like 'w:tbl' or 'CT_Tbl'",
+					"- `section_id` — substring like '17.4.37' or '2.1.149'",
+					"- `source_anchor` — MS-OI29500 page GUID",
+					"- `query` — free-text search",
+					"- `app` — 'Word', 'Excel', 'PowerPoint', or 'Office'",
+					"- `claim_type` — e.g. 'does_not_support', 'varies_from_spec'",
+				].join("\n");
+			}
+			const notes = await fetchBehaviorNotes(sql, filter);
+			return formatBehaviorReport(notes, filter, qname);
+		}
+
 		default: {
 			const _exhaustive: never = name;
 			throw new Error(`Unhandled OOXML tool: ${_exhaustive}`);
@@ -273,7 +359,12 @@ export async function runOoxmlTool(
 
 // --- Formatting --------------------------------------------------------
 
-function formatSymbolReport(label: string, hit: SymbolHit, profile: string): string {
+function formatSymbolReport(
+	label: string,
+	hit: SymbolHit,
+	profile: string,
+	notes: BehaviorNote[] = [],
+): string {
 	const lines: string[] = [];
 	lines.push(`## ${label}: ${hit.localName}`);
 	lines.push("");
@@ -284,6 +375,90 @@ function formatSymbolReport(label: string, hit: SymbolHit, profile: string): str
 	lines.push(`- namespace: ${hit.namespaceUri}`);
 	if (hit.typeRef) lines.push(`- type_ref: ${hit.typeRef}`);
 	if (hit.sourceName) lines.push(`- source: ${hit.sourceName}`);
+	if (notes.length > 0) {
+		lines.push("");
+		appendBehaviorSection(lines, notes);
+	}
+	return lines.join("\n");
+}
+
+/**
+ * Per-page Learn URL for a behavior-note source. The `reference_sources.url`
+ * stored in the manifest is the doc landing page (with its own GUID). Naively
+ * appending `/<source_anchor>` produced `.../ms-oi29500/<landing-guid>/<note-guid>`,
+ * which 404s. Each known source maps to a fixed page-base path; we append
+ * source_anchor to that.
+ */
+const SOURCE_PAGE_BASE: Record<string, string> = {
+	"ms-oi29500": "https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500",
+};
+
+function buildNoteUrl(sourceName: string | null, anchor: string | null): string | null {
+	if (!sourceName || !anchor) return null;
+	const base = SOURCE_PAGE_BASE[sourceName];
+	return base ? `${base}/${anchor}` : null;
+}
+
+/**
+ * Append a "Behavior notes" section to a structural report. Groups by source
+ * page (source_anchor) so multiple claims from the same MS-OI29500 entry stay
+ * together.
+ */
+function appendBehaviorSection(lines: string[], notes: BehaviorNote[]): void {
+	lines.push(`## Behavior notes (${notes.length})`);
+	lines.push("");
+	const byAnchor = new Map<string, BehaviorNote[]>();
+	for (const n of notes) {
+		const k = n.sourceAnchor ?? "(no anchor)";
+		if (!byAnchor.has(k)) byAnchor.set(k, []);
+		byAnchor.get(k)?.push(n);
+	}
+	for (const [_anchor, group] of byAnchor) {
+		const first = group[0];
+		const heading = first.sectionId ? `${first.sectionId}` : (first.sourceAnchor ?? "(no anchor)");
+		const src = first.sourceName ? ` — ${first.sourceName}` : "";
+		lines.push(`### ${heading}${src}`);
+		const url = buildNoteUrl(first.sourceName, first.sourceAnchor);
+		if (url) lines.push(`(${url})`);
+		for (const n of group) {
+			const labelTag = n.claimLabel ? `${n.claimLabel}.` : "-";
+			const scopeTag = n.versionScope ? ` _scope: ${n.versionScope}_` : "";
+			if (n.standardText) lines.push(`${labelTag} *${n.standardText}*`);
+			if (n.behaviorText)
+				lines.push(`    - ${n.behaviorText} \`(${n.app}, ${n.claimType})\`${scopeTag}`);
+			else lines.push(`    - ${n.summary} \`(${n.app}, ${n.claimType})\`${scopeTag}`);
+		}
+		lines.push("");
+	}
+}
+
+function formatBehaviorReport(
+	notes: BehaviorNote[],
+	filter: {
+		symbolName?: string;
+		sectionId?: string;
+		sourceAnchor?: string;
+		query?: string;
+		app?: string;
+		claimType?: string;
+	},
+	qname: string | undefined,
+): string {
+	const lines: string[] = [];
+	const filterDesc: string[] = [];
+	if (qname) filterDesc.push(`qname=${qname}`);
+	if (filter.sectionId) filterDesc.push(`section=${filter.sectionId}`);
+	if (filter.sourceAnchor) filterDesc.push(`anchor=${filter.sourceAnchor}`);
+	if (filter.query) filterDesc.push(`query="${filter.query}"`);
+	if (filter.app) filterDesc.push(`app=${filter.app}`);
+	if (filter.claimType) filterDesc.push(`claim_type=${filter.claimType}`);
+	lines.push(`## Behavior notes — ${filterDesc.join(", ")}`);
+	lines.push("");
+	if (notes.length === 0) {
+		lines.push("_no matching behavior notes._");
+		return lines.join("\n");
+	}
+	appendBehaviorSection(lines, notes);
 	return lines.join("\n");
 }
 
