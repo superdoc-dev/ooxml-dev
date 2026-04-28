@@ -21,14 +21,15 @@
     "db:shell": "docker compose exec db psql -U postgres -d ecma_spec",
     "db:migrate": "bun scripts/db-migrate.ts",
     "sources:sync": "bun scripts/sources-sync.ts",
-    "pdf:ingest": "bun scripts/ingest-pdf/pipeline.ts",
-    "pdf:chunk": "bun scripts/ingest-pdf/chunk.ts",
-    "pdf:embed": "bun scripts/ingest-pdf/embed.ts",
-    "pdf:upload": "bun scripts/ingest-pdf/upload.ts",
+    "pdf:ingest": "bun scripts/ingest-ecma-376-pdfs/pipeline.ts",
+    "pdf:chunk": "bun scripts/ingest-ecma-376-pdfs/chunk.ts",
+    "pdf:embed": "bun scripts/ingest-ecma-376-pdfs/embed.ts",
+    "pdf:upload": "bun scripts/ingest-ecma-376-pdfs/upload.ts",
     "pdf:setup": "pip install -r scripts/requirements.txt",
-    "xsd:fetch": "bun scripts/ingest-xsd/fetch.ts",
-    "xsd:ingest": "bun scripts/ingest-xsd/ingest.ts",
-    "test": "export TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/ecma_spec} && bun test tests/db/ && bun test tests/ingest-xsd/ && bun test tests/mcp-server/"
+    "xsd:fetch": "bun scripts/ingest-ecma-376-xsds/fetch.ts",
+    "xsd:ingest": "bun scripts/ingest-ecma-376-xsds/ingest.ts",
+    "ms:ingest": "bun scripts/ingest-ms-oi29500/ingest.ts",
+    "test": "export TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/ecma_spec} && bun test tests/db/ && bun test tests/ingest-ecma-376-xsds/ && bun test tests/ingest-ms-oi29500/ && bun test tests/mcp-server/"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",

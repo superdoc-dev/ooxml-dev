@@ -140,7 +140,7 @@ function handleInitialize(id: number | string | null): JsonRpcResponse {
 				version: "0.1.0",
 			},
 			instructions:
-				"OOXML (ECMA-376 / Office Open XML) reference server. Two tool families: prose search over the spec PDFs (ooxml_search, ooxml_section, ooxml_parts) and deterministic schema lookup over the parsed XSDs (ooxml_element, ooxml_type, ooxml_children, ooxml_attributes, ooxml_enum, ooxml_namespace).",
+				"OOXML (ECMA-376 / Office Open XML) reference server. Three tool families: prose search over the spec PDFs (ooxml_search, ooxml_section, ooxml_parts), deterministic schema lookup over the parsed XSDs (ooxml_element, ooxml_type, ooxml_children, ooxml_attributes, ooxml_enum, ooxml_namespace), and Office implementation behavior notes from MS-OI29500 (ooxml_behavior, plus inline notes on ooxml_element/ooxml_type when the symbol has any).",
 		},
 	};
 }

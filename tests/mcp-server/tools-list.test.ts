@@ -21,6 +21,10 @@ const EXPECTED_TOOL_NAMES = [
 	"ooxml_attributes",
 	"ooxml_enum",
 	"ooxml_namespace",
+	// Implementation behavior notes (MS-OI29500)
+	"ooxml_implementation_notes",
+	// Word ground-truth observations from authored fixtures
+	"ooxml_word_behavior",
 ] as const;
 
 interface JsonRpcResponse {

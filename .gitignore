@@ -12,3 +12,6 @@ PLAN.md
 
 # XSD/spec artifacts: pulled by scripts/fetch-xsd.ts; never committed.
 data/xsd-cache/
+
+# MS-OI29500 ingest cache (Microsoft Learn markdown pages).
+data/ms-oi29500-cache/

@@ -9,9 +9,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "bun:test";
-import { parseSchemaSet } from "../../scripts/ingest-xsd/parse-schema.ts";
-import { declarationQNameKey, resolveQNameAttr } from "../../scripts/ingest-xsd/qname.ts";
-import type { Declaration, DeclarationKind } from "../../scripts/ingest-xsd/types.ts";
+import { parseSchemaSet } from "../../scripts/ingest-ecma-376-xsds/parse-schema.ts";
+import { declarationQNameKey, resolveQNameAttr } from "../../scripts/ingest-ecma-376-xsds/qname.ts";
+import type { Declaration, DeclarationKind } from "../../scripts/ingest-ecma-376-xsds/types.ts";
 
 const FIXTURES_DIR = join(import.meta.dir, "fixtures");
 const REAL_CACHE_DIR = "./data/xsd-cache/ecma-376-transitional";

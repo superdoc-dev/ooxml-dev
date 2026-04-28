@@ -8,7 +8,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from "bun:test";
-import { ingestSchemaSet } from "../../scripts/ingest-xsd/ingest.ts";
+import { ingestSchemaSet } from "../../scripts/ingest-ecma-376-xsds/ingest.ts";
 import { createDbClient, type DbClient } from "../../packages/shared/src/db/index.ts";
 
 const FIXTURES_DIR = join(import.meta.dir, "fixtures");
@@ -23,6 +23,9 @@ let db: DbClient;
 
 const TRUNCATE_SQL = `
 	TRUNCATE
+		behavior_note_observations,
+		word_observations,
+		word_fixtures,
 		behavior_notes,
 		xsd_enums,
 		xsd_inheritance_edges,

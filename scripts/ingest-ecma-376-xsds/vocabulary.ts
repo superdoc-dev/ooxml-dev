@@ -63,7 +63,7 @@ export function vocabularyForNamespace(uri: string): string {
 	const v = NAMESPACE_TO_VOCABULARY[uri];
 	if (!v) {
 		throw new Error(
-			`Unknown namespace URI: ${uri}. Add it to NAMESPACE_TO_VOCABULARY in scripts/ingest-xsd/vocabulary.ts.`,
+			`Unknown namespace URI: ${uri}. Add it to NAMESPACE_TO_VOCABULARY in scripts/ingest-ecma-376-xsds/vocabulary.ts.`,
 		);
 	}
 	return v;
